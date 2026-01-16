@@ -1,9 +1,8 @@
 streamlit
 pandas
 numpy
+plotly
 scikit-learn
 pulp
 google-generativeai
-matplotlib
-plotly
-python-dotenv
+fpdf
