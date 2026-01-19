@@ -9,7 +9,6 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.tree import DecisionTreeRegressor
 import pulp
 import google.generativeai as genai
 from scipy.stats import norm
@@ -17,178 +16,197 @@ from fpdf import FPDF
 import io
 
 # ----------------------------------------------------
-# 0. CONFIGURATION & MODELS
+# 0. CORE CONFIGURATION & API INTEGRATION
 # ----------------------------------------------------
+# Your provided API Key is hardcoded here to ensure background operation.
 GEMINI_API_KEY = "AIzaSyDAz2r4IRQT5dv3zNq-uuRO7D2O86nNueE"
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
-st.set_page_config(page_title="STRATOS QUANT | Enterprise Capital Advisor", layout="wide")
+st.set_page_config(page_title="STRATOS QUANT | MSc Finance Advisor", layout="wide")
 
-# Institutional Theme
+# Custom CSS for "Bloomberg-Style" Terminal UI
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Public+Sans:wght@300;400;700&display=swap');
-    html, body, [class*="css"] { font-family: 'Public Sans', sans-serif; background-color: #0d1117; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; background-color: #0d1117; }
     .stApp { background-color: #0d1117; color: #c9d1d9; }
-    .main-title { font-size: 34px; font-weight: 800; letter-spacing: -1px; color: #ffffff; margin-bottom: 0px; }
-    .metric-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; text-align: center; }
-    .stButton>button { width: 100%; border-radius: 4px; background-color: #238636; color: white; border: none; font-weight: 700; }
+    .main-title { 
+        font-size: 36px; font-weight: 800; letter-spacing: -1.5px; 
+        background: linear-gradient(90deg, #10b981, #3b82f6);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        margin-bottom: 0px;
+    }
+    div[data-testid="stMetric"] {
+        background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 22px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
+    .stTabs [data-baseweb="tab"] {
+        background-color: #161b22; border: 1px solid #30363d; border-radius: 5px 5px 0 0; padding: 10px 20px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 # ----------------------------------------------------
-# 1. FINANCE & ML LOGIC
+# 1. QUANTITATIVE FINANCE ENGINES
 # ----------------------------------------------------
 
 def black_scholes_roa(S, K, T, r, sigma):
+    """Real Options Valuation: Option to Expand."""
     if T <= 0 or sigma <= 0 or S <= 0: return 0
     d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
     d2 = d1 - sigma * np.sqrt(T)
     return S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
 
-@st.cache_data
-def generate_dummy_data():
-    """Restores the capability to generate high-quality dummy data if no file is uploaded."""
-    data = {
-        'Project_ID': [f"EXT-{i:03d}" for i in range(1, 26)],
-        'Department': np.random.choice(['FinTech', 'Green Energy', 'Infrastructure', 'R&D', 'Operations'], 25),
-        'Investment_Capital': np.random.choice([250000, 500000, 750000, 1000000, 1500000], 25),
-        'Risk_Score': np.random.uniform(1.5, 9.5, 25),
-        'ESG_Score': np.random.uniform(2, 10, 25),
-        'Carbon_Offset_MT': np.random.uniform(50, 500, 25),
-        'Market_Volatility': np.random.uniform(0.1, 0.45, 25),
-        'Historical_Success_Rate': np.random.uniform(0.6, 0.95, 25),
-        'Strategic_Alignment': np.random.randint(1, 11, 25)
-    }
-    # Create target ROI for training
-    df = pd.DataFrame(data)
-    df['Actual_ROI'] = (df['Strategic_Alignment'] * 2) + (df['Historical_Success_Rate'] * 10) - df['Risk_Score'] + np.random.normal(0, 2, 25)
+def run_optimization(df, budget, esg_hurdle):
+    """Mixed Integer Programming for Capital Allocation."""
+    prob = pulp.LpProblem("Portfolio_Opt", pulp.LpMaximize)
+    xs = pulp.LpVariable.dicts("Select", df.index, cat=pulp.LpBinary)
+    
+    # Objective: Maximize Total Strategic Value (NPV + ROA)
+    prob += pulp.lpSum([df.loc[i, 'Strategic_Value'] * xs[i] for i in df.index])
+    
+    # Constraints
+    prob += pulp.lpSum([df.loc[i, 'Investment_Capital'] * xs[i] for i in df.index]) <= budget
+    prob += pulp.lpSum([df.loc[i, 'ESG_Score'] * xs[i] for i in df.index]) >= esg_hurdle * pulp.lpSum([xs[i] for i in df.index])
+    
+    prob.solve(pulp.PULP_CBC_CMD(msg=0))
+    df['Selected'] = [pulp.value(xs[i]) for i in df.index]
     return df
 
-def train_and_predict(df):
-    features = ['Investment_Capital', 'Risk_Score', 'ESG_Score', 'Market_Volatility', 'Historical_Success_Rate']
-    target = 'Actual_ROI'
-    
-    rf = RandomForestRegressor(n_estimators=100, random_state=42)
-    rf.fit(df[features], df[target])
-    
-    df['Pred_ROI'] = rf.predict(df[features])
-    importances = pd.DataFrame({'Feature': features, 'Importance': rf.feature_importances_})
-    return df, importances
-
 # ----------------------------------------------------
-# 2. APP FLOW
+# 2. MAIN APP ARCHITECTURE
 # ----------------------------------------------------
 
 def main():
     st.markdown('<p class="main-title">STRATOS | Capital Allocation Advisor</p>', unsafe_allow_html=True)
-    st.markdown('<p style="color: #8b949e;">Multi-Criteria AI Optimization & Strategic Risk Management</p>', unsafe_allow_html=True)
-    
-    # --- Sidebar ---
+    st.markdown('<p style="color: #8b949e; margin-bottom: 25px;">Institutional Strategy & Asset-Liability Management Framework</p>', unsafe_allow_html=True)
+
+    # --- SIDEBAR: DATA & PARAMETERS ---
     with st.sidebar:
-        st.header("1. Data Ingestion")
-        uploaded_file = st.file_uploader("Upload Project Proposals (CSV)", type=["csv"])
-        load_dummy = st.checkbox("Use Strategic Dummy Data", value=not uploaded_file)
+        st.header("Data Ingestion")
+        up_file = st.file_uploader("Upload Project CSV", type="csv")
+        use_demo = st.checkbox("Load MSc Institutional Data", value=not up_file)
         
-        st.header("2. Macro Parameters")
+        st.header("Risk & Macro")
         rf_rate = st.slider("Risk-Free Rate (Rf)", 0.0, 8.0, 4.2) / 100
-        mkt_prem = st.slider("Equity Risk Premium", 3.0, 10.0, 5.5) / 100
-        
-        st.header("3. Allocation Constraints")
-        budget = st.number_input("Capital Pool ($)", value=5000000)
-        min_esg = st.slider("Min Portfolio ESG Score", 1, 10, 6)
-        
-    # Data Loading Logic
-    if uploaded_file:
-        df = pd.read_csv(uploaded_file)
-    elif load_dummy:
-        df = generate_dummy_data()
+        budget = st.number_input("Capital Pool ($)", value=5000000, step=500000)
+        esg_min = st.slider("Portfolio ESG Hurdle", 1, 10, 6)
+
+    # Data Initialization
+    if up_file:
+        df = pd.read_csv(up_file)
     else:
-        st.info("Please upload data or select 'Use Dummy Data' to begin.")
-        st.stop()
+        # Create High-Fidelity Data
+        np.random.seed(42)
+        df = pd.DataFrame({
+            'Project_ID': [f"FIN-{i:03d}" for i in range(1, 26)],
+            'Department': np.random.choice(['ESG Fintech', 'R&D', 'Infrastructure', 'Digital Assets'], 25),
+            'Investment_Capital': np.random.choice([250000, 500000, 1000000, 1500000], 25),
+            'Risk_Score': np.random.uniform(2.0, 9.0, 25),
+            'ESG_Score': np.random.uniform(3.0, 10.0, 25),
+            'Volatility': np.random.uniform(0.12, 0.40, 25),
+            'Strategic_Alignment': np.random.randint(4, 11, 25)
+        })
+        df['Actual_ROI'] = (df['Strategic_Alignment'] * 1.8) - (df['Risk_Score'] * 0.5) + 10 + np.random.normal(0, 1, 25)
 
-    # ML ROI Prediction
-    df, feature_importance = train_and_predict(df)
-    
-    # Financial Engineering Calculations
-    wacc = rf_rate + (1.2 * mkt_prem)
-    df['ROA_Value'] = df.apply(lambda x: black_scholes_roa(x['Investment_Capital']*1.3, x['Investment_Capital'], 2, rf_rate, x['Market_Volatility']), axis=1)
+    # ML ROI Forecaster
+    features = ['Investment_Capital', 'Risk_Score', 'ESG_Score', 'Volatility', 'Strategic_Alignment']
+    rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
+    rf_model.fit(df[features], df['Actual_ROI'])
+    df['Pred_ROI'] = rf_model.predict(df[features])
+    feat_imp = pd.DataFrame({'Feature': features, 'Importance': rf_model.feature_importances_})
+
+    # Financial Metric Layers
+    wacc = rf_rate + 0.055 
+    df['ROA_Value'] = df.apply(lambda x: black_scholes_roa(x['Investment_Capital']*1.3, x['Investment_Capital'], 2, rf_rate, x['Volatility']), axis=1)
     df['NPV'] = (df['Investment_Capital'] * (df['Pred_ROI']/100)) / wacc
-    df['Strategic_NPV'] = df['NPV'] + df['ROA_Value']
-    df['Profitability_Index'] = df['Strategic_NPV'] / df['Investment_Capital']
-    
-    # Optimization (Mixed Integer Programming)
-    prob = pulp.LpProblem("Capital_Allocation", pulp.LpMaximize)
-    xs = pulp.LpVariable.dicts("Select", df.index, cat=pulp.LpBinary)
-    
-    prob += pulp.lpSum([df.loc[i, 'Strategic_NPV'] * xs[i] for i in df.index])
-    prob += pulp.lpSum([df.loc[i, 'Investment_Capital'] * xs[i] for i in df.index]) <= budget
-    prob += pulp.lpSum([df.loc[i, 'ESG_Score'] * xs[i] for i in df.index]) >= min_esg * pulp.lpSum([xs[i] for i in df.index])
-    
-    prob.solve(pulp.PULP_CBC_CMD(msg=0))
-    df['Selected'] = [pulp.value(xs[i]) for i in df.index]
-    selected_df = df[df['Selected'] == 1]
+    df['Strategic_Value'] = df['NPV'] + df['ROA_Value']
+    df['PI'] = df['Strategic_Value'] / df['Investment_Capital']
 
-    # --- MAIN DASHBOARD ---
-    t1, t2, t3, t4 = st.tabs(["🚀 Portfolio Summary", "📈 ML Insights", "🛡️ Stress Test", "📝 AI Memo"])
+    # Optimization
+    df = run_optimization(df, budget, esg_min)
+    selected = df[df['Selected'] == 1]
+
+    # --- DASHBOARD TABS ---
+    tab1, tab2, tab3, tab4 = st.tabs(["🚀 Portfolio Summary", "🧠 ML Analytics", "📊 Sensitivity Heatmap", "🤖 AI Thesis"])
     
-    with t1:
+    with tab1:
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Projects Funded", f"{len(selected_df)} / {len(df)}")
-        c2.metric("Budget Utilization", f"${selected_df['Investment_Capital'].sum():,.0f}", f"{selected_df['Investment_Capital'].sum()/budget*100:.1f}%")
-        c3.metric("Agg. Strategic NPV", f"${selected_df['Strategic_NPV'].sum():,.0f}")
-        c4.metric("Avg ESG Impact", f"{selected_df['ESG_Score'].mean():.1f}")
+        c1.metric("Capital Utilized", f"${selected['Investment_Capital'].sum():,.0f}", f"{selected['Investment_Capital'].sum()/budget*100:.1f}%")
+        c2.metric("Portfolio NPV", f"${selected['Strategic_Value'].sum():,.0f}")
+        c3.metric("Avg ESG Impact", f"{selected['ESG_Score'].mean():.1f}/10")
+        c4.metric("Avg PI", f"{selected['PI'].mean():.2f}x")
         
-        st.write("### Optimized Investment Schedule")
-        st.dataframe(selected_df[['Project_ID', 'Department', 'Investment_Capital', 'Pred_ROI', 'Profitability_Index', 'ESG_Score']].style.background_gradient(cmap='Greens'))
-        
-        # Download Data
-        csv = selected_df.to_csv(index=False).encode('utf-8')
-        st.download_button("Export Optimized Portfolio (CSV)", csv, "portfolio.csv", "text/csv")
+        st.write("### Strategic Selection Matrix")
+        st.dataframe(selected[['Project_ID', 'Department', 'Investment_Capital', 'Pred_ROI', 'PI', 'ESG_Score']].style.background_gradient(cmap='Greens'))
 
-    with t2:
-        col_a, col_b = st.columns(2)
-        with col_a:
-            st.write("**Model Explainability: Feature Importance**")
-            fig_imp = px.bar(feature_importance, x='Importance', y='Feature', orientation='h', color='Importance', color_continuous_scale='Viridis')
+    with tab2:
+        col_l, col_r = st.columns(2)
+        with col_l:
+            st.write("**Feature Importance (Random Forest)**")
+            fig_imp = px.bar(feat_imp, x='Importance', y='Feature', orientation='h', color='Importance', color_continuous_scale='Teal')
             st.plotly_chart(fig_imp, use_container_width=True)
-        with col_b:
-            st.write("**Strategic Frontier: Value vs ESG**")
-            fig_scat = px.scatter(df, x="ESG_Score", y="Strategic_NPV", size="Investment_Capital", color="Selected",
-                                  hover_name="Project_ID", color_discrete_map={1:'#00e676', 0:'#ff1744'})
+        with col_r:
+            st.write("**Efficient Frontier: Strategic NPV vs ESG**")
+            fig_scat = px.scatter(df, x="ESG_Score", y="Strategic_Value", size="Investment_Capital", color="Selected",
+                                  hover_name="Project_ID", color_discrete_map={1:'#10b981', 0:'#ff4b4b'})
             st.plotly_chart(fig_scat, use_container_width=True)
 
-    with t3:
-        st.subheader("Monte Carlo Simulation (1,000 Paths)")
-        # Simulating volatility in NPV
-        sim_results = []
-        for _ in range(1000):
-            shocks = np.random.normal(0, selected_df['Market_Volatility'].mean(), len(selected_df))
-            sim_npv = (selected_df['Strategic_NPV'] * (1 + shocks)).sum()
-            sim_results.append(sim_npv)
+    with tab3:
+        st.subheader("Multi-Scenario Sensitivity Matrix")
+        st.write("Analysis of Portfolio NPV across Budget Constraints and ESG Hurdles.")
         
-        fig_sim = px.histogram(sim_results, title="Portfolio Value Distribution under Volatility Stress", color_discrete_sequence=['#3b82f6'])
-        st.plotly_chart(fig_sim, use_container_width=True)
-        st.write(f"**Value-at-Risk (VaR) 95%:** ${np.percentile(sim_results, 5):,.0f}")
+        # Generating Heatmap Data
+        b_range = np.linspace(budget * 0.7, budget * 1.3, 5)
+        e_range = np.linspace(4, 9, 5)
+        heatmap_data = []
 
-    with t4:
-        st.subheader("Institutional AI Investment Thesis")
-        target_p = st.selectbox("Select Project for Deep Dive", selected_df['Project_ID'])
-        row = selected_df[selected_df['Project_ID'] == target_p].iloc[0]
+        for b in b_range:
+            row = []
+            for e in e_range:
+                temp_df = run_optimization(df.copy(), b, e)
+                row.append(temp_df[temp_df['Selected'] == 1]['Strategic_Value'].sum())
+            heatmap_data.append(row)
+
+        fig_heat = px.imshow(heatmap_data, 
+                             x=[f"ESG {e:.1f}" for e in e_range], 
+                             y=[f"${b/1e6:.1f}M" for b in b_range],
+                             labels=dict(x="ESG Hurdle", y="Budget Capacity", color="Total NPV"),
+                             color_continuous_scale='Viridis')
+        st.plotly_chart(fig_heat, use_container_width=True)
         
-        if st.button("Generate Institutional Memo"):
-            with st.spinner("AI analyzing project fundamentals..."):
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                prompt = f"""
-                Analyze investment project {target_p}. 
-                Fundamentals: Capital ${row['Investment_Capital']}, Predicted ROI {row['Pred_ROI']:.2f}%, 
-                ESG {row['ESG_Score']}/10, Profitability Index {row['Profitability_Index']:.2f}.
-                Context: WACC is {wacc*100:.1f}%. 
-                Write a 3-bullet thesis: 1. Financial Viability, 2. ESG/Strategic alignment, 3. Critical Risk Factor.
-                """
-                response = model.generate_content(prompt)
-                st.info(response.text)
+
+    with tab4:
+        st.subheader("Institutional AI Investment Thesis")
+        target = st.selectbox("Select Project for Deep Dive", selected['Project_ID'])
+        r = selected[selected['Project_ID'] == target].iloc[0]
+        
+        if st.button("Generate Strategic Memo"):
+            with st.spinner("Accessing Gemini Institutional Logic..."):
+                try:
+                    # FIX: Dynamic Discovery to prevent 'NotFound' traceback
+                    model_list = genai.list_models()
+                    available = [m.name for m in model_list if 'generateContent' in m.supported_generation_methods]
+                    chosen_model = "gemini-1.5-flash"
+                    if f"models/{chosen_model}" not in available:
+                        chosen_model = available[0].replace("models/", "")
+
+                    model = genai.GenerativeModel(chosen_model)
+                    prompt = f"""
+                    Role: Senior Investment Committee Member. 
+                    Project: {target} in {r['Department']}. 
+                    Metrics: Capital ${r['Investment_Capital']}, Strategic NPV ${r['Strategic_Value']:.2f}, 
+                    ESG {r['ESG_Score']}/10, PI {r['PI']:.2f}.
+                    Context: WACC {wacc*100:.1f}%.
+                    Write a 2-sentence institutional thesis and identify 1 hidden risk factor.
+                    """
+                    response = model.generate_content(prompt)
+                    st.info(f"Generated via {chosen_model.upper()}")
+                    st.markdown(response.text)
+                except Exception as e:
+                    st.error(f"AI Connectivity Error: {e}")
 
 if __name__ == "__main__":
     main()
