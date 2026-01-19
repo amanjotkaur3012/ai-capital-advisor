@@ -4,7 +4,6 @@
 # Author: Aman
 # =========================================================
 
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -13,206 +12,148 @@ import plotly.graph_objects as go
 from sklearn.ensemble import GradientBoostingRegressor
 import pulp
 import sqlite3
-import google.generativeai as genai
 from datetime import datetime
 
 # ----------------------------------------------------
-# 1. THEME & UI CUSTOMIZATION
+# 1. CORE ARCHITECTURE: FINCAP-AI ENGINE
 # ----------------------------------------------------
-st.set_page_config(
-    page_title="EQUITYFLOW | Strategic Capital Advisor",
-    layout="wide",
-    initial_sidebar_state="expanded",
-    page_icon="💎"
-)
+class FinCapEngine:
+    @staticmethod
+    def compute_dcf_metrics(capex, cash_flow, life_years, wacc):
+        """Calculates NPV and Profitability Index (PI)."""
+        # Present Value of Cash Flows (Annuity Formula)
+        pv_factor = (1 - (1 + wacc) ** -life_years) / wacc
+        pv_of_inflows = cash_flow * pv_factor
+        npv = pv_of_inflows - capex
+        pi = pv_of_inflows / capex if capex > 0 else 0
+        return round(npv, 2), round(pi, 2)
 
-# Custom CSS for a unique "Glassmorphism" look
+    @staticmethod
+    def simulate_risk_exposure(base_npv, risk_beta):
+        """Monte Carlo simulation for Value-at-Risk (VaR)."""
+        sims = np.random.normal(base_npv, base_npv * (risk_beta * 0.1), 1000)
+        return np.percentile(sims, 5) # 5% VaR (Worst Case)
+
+# ----------------------------------------------------
+# 2. BRANDED UI & THEME
+# ----------------------------------------------------
+st.set_page_config(page_title="FINCAP-AI | Intelligent Advisor", layout="wide", page_icon="📈")
+
 st.markdown("""
     <style>
-    :root {
-        --primary: #6366f1;
-        --secondary: #ec4899;
-        --bg-dark: #0b0f19;
-        --card-bg: #161b2c;
+    @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
+    
+    .stApp { background-color: #05070a; color: #e0e0e0; }
+    
+    /* Executive KPI Cards */
+    [data-testid="stMetric"] {
+        background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+        border-radius: 10px;
+        padding: 20px;
+        border: 1px solid #374151;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
     
-    .stApp { background-color: var(--bg-dark); }
+    /* Finance-Grade Sidebar */
+    section[data-testid="stSidebar"] { background-color: #0b0f19; border-right: 1px solid #1f2937; }
     
-    /* Unique Sidebar Gradient */
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #161b2c 0%, #0b0f19 100%);
-        border-right: 1px solid #2d3748;
-    }
-
-    /* Glass Effect Cards */
-    div[data-testid="stMetric"], .stDataFrame, div[data-testid="stExpander"] {
-        background-color: var(--card-bg) !important;
-        border: 1px solid #2d3748 !important;
-        border-radius: 12px !important;
-        padding: 20px !important;
-    }
-
-    /* Custom Typography */
     .main-title {
-        font-size: 42px;
-        font-weight: 800;
-        background: linear-gradient(90deg, #818cf8, #c084fc);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0px;
-    }
-    .sub-text { color: #94a3b8; font-size: 14px; margin-bottom: 30px; }
-
-    /* Button Styling */
-    .stButton>button {
-        border-radius: 8px;
-        background: linear-gradient(90deg, #6366f1, #4f46e5);
-        color: white;
-        border: none;
-        padding: 0.5rem 1rem;
-        transition: 0.3s;
-    }
-    .stButton>button:hover {
-        opacity: 0.9;
-        transform: translateY(-2px);
+        font-family: 'Roboto Mono', monospace;
+        color: #60a5fa;
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: 2px;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# ----------------------------------------------------
-# 2. CORE LOGIC & DATA ENGINE
-# ----------------------------------------------------
-class CapitalAdvisor:
-    def __init__(self):
-        self.db_name = "equityflow_core.db"
-        self._init_db()
-
-    def _init_db(self):
-        with sqlite3.connect(self.db_name) as conn:
-            conn.execute("""CREATE TABLE IF NOT EXISTS records 
-                         (id INTEGER PRIMARY KEY, scenario_name TEXT, timestamp TEXT, 
-                          budget REAL, total_npv REAL, avg_roi REAL, count INTEGER)""")
-
-    @staticmethod
-    def map_inputs(df):
-        """Standardizes input column naming convention"""
-        mapping = {
-            'Capex': 'Investment', 'Cost': 'Investment', 'Budget': 'Investment',
-            'Return': 'ROI_Expected', 'ROI': 'ROI_Expected',
-            'Strategic': 'Alignment_Score', 'Risk': 'Risk_Index'
-        }
-        df = df.rename(columns=mapping)
-        # Fill missing critical columns
-        if 'Is_Required' not in df.columns: df['Is_Required'] = 0
-        return df
-
-    @staticmethod
-    def train_predictive_model(df_hist):
-        """Uses Gradient Boosting for more modern forecasting"""
-        features = ["Investment", "Risk_Index", "Alignment_Score"]
-        # Ensure data exists for these columns
-        model = GradientBoostingRegressor(n_estimators=100, learning_rate=0.1)
-        model.fit(df_hist[features], df_hist["Actual_ROI"])
-        return model
-
-    @staticmethod
-    def solve_allocation(df, budget_limit):
-        """Linear Programming Optimization"""
-        prob = pulp.LpProblem("Allocation_Optimization", pulp.LpMaximize)
-        choices = pulp.LpVariable.dicts("Select", df.index, cat='Binary')
-        
-        # Objective: Maximize NPV
-        prob += pulp.lpSum([df.loc[i, "Estimated_NPV"] * choices[i] for i in df.index])
-        
-        # Constraint: Stay within budget
-        prob += pulp.lpSum([df.loc[i, "Investment"] * choices[i] for i in df.index]) <= budget_limit
-        
-        # Constraint: Mandatory Projects
-        for i in df.index:
-            if df.loc[i, 'Is_Required'] == 1:
-                prob += choices[i] == 1
-
-        prob.solve(pulp.PULP_CBC_CMD(msg=0))
-        df["Decision"] = [int(choices[i].varValue) for i in df.index]
-        return df
-
-# ----------------------------------------------------
-# 3. INTERFACE RENDERING
-# ----------------------------------------------------
-def main():
-    advisor = CapitalAdvisor()
+# --- SIDEBAR: GOVERNANCE & CONSTRAINTS ---
+with st.sidebar:
+    st.markdown("<div class='main-title'>FINCAP-AI</div>", unsafe_allow_html=True)
+    st.caption("Intelligent Capital Allocation Advisor")
+    st.divider()
     
-    # Sidebar Logo
-    with st.sidebar:
-        st.markdown("<div class='main-title'>EQUITYFLOW</div>", unsafe_allow_html=True)
-        st.markdown("<div class='sub-text'>AI CAPITAL ALLOCATION v2.0</div>", unsafe_allow_html=True)
-        st.divider()
-        
-        nav = st.radio("STRATEGY HUB", 
-                       ["1. Data Intake", "2. Performance Dashboard", "3. Strategic Portfolio", "4. Scenario Lab"])
-        
-        st.divider()
-        st.subheader("Config Parameters")
-        budget = st.number_input("Total Capital Pool (₹)", value=10000000.0)
-        wacc = st.slider("WACC / Discount Rate (%)", 5.0, 20.0, 10.0) / 100
-        
-    # LOGIC: Data Handling
-    if nav == "1. Data Intake":
-        st.header("Financial Data Ingestion")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.info("Upload historical project performance to train the AI forecasting engine.")
-            hist_file = st.file_uploader("Historical Performance (CSV)", type="csv")
-        with col2:
-            st.info("Upload your current pipeline for the upcoming fiscal year.")
-            prop_file = st.file_uploader("New Project Proposals (CSV)", type="csv")
+    auth_token = st.text_input("Institutional Token", type="password", value="ADMIN_SECURE")
+    st.divider()
+    
+    st.subheader("Capital Controls")
+    total_budget = st.number_input("Total Allocation Pool (₹)", value=100000000, step=5000000)
+    wacc_hurdle = st.slider("Hurdle Rate (WACC %)", 5.0, 20.0, 11.5) / 100
+    risk_buffer = st.slider("Contingency Reserve (%)", 0, 20, 5) / 100
+    
+    st.divider()
+    st.info(f"Available Capital: ₹{(total_budget * (1-risk_buffer))/1e6:.1f}M")
+
+# ----------------------------------------------------
+# 3. ANALYTIC WORKSPACE
+# ----------------------------------------------------
+tabs = st.tabs(["🏛️ Allocation Strategy", "📊 Risk Frontier", "📄 Portfolio Audit"])
+
+# Mock Project Data with Advanced Finance Attributes
+df = pd.DataFrame({
+    "Project_ID": [f"PRJ-{i:03}" for i in range(1, 9)],
+    "Sector": ["Technology", "Energy", "Healthcare", "Infrastructure", "Technology", "Consumer", "Healthcare", "Energy"],
+    "Capex": [15M, 35M, 12M, 40M, 18M, 10M, 25M, 30M],
+    "Annual_Inflow": [4.2M, 8.5M, 3.1M, 9.2M, 4.8M, 2.8M, 6.5M, 7.2M],
+    "Life_Span": [5, 10, 4, 12, 6, 4, 7, 8],
+    "Beta_Risk": [1.4, 0.9, 1.1, 0.8, 1.5, 1.0, 1.2, 0.95]
+})
+
+# Engineering Metrics
+df['NPV'], df['PI'] = zip(*df.apply(lambda x: FinCapEngine.compute_dcf_metrics(x['Capex'], x['Annual_Inflow'], x['Life_Span'], wacc_hurdle), axis=1))
+df['VaR_WorstCase'] = df.apply(lambda x: FinCapEngine.simulate_risk_exposure(x['NPV'], x['Beta_Risk']), axis=1)
+
+# Linear Programming: Binary Integer Optimization
+prob = pulp.LpProblem("Capital_Rationing", pulp.LpMaximize)
+select = pulp.LpVariable.dicts("Project", df.index, cat='Binary')
+# Objective: Maximize Total Portfolio NPV
+prob += pulp.lpSum([df.loc[i, 'NPV'] * select[i] for i in df.index])
+# Constraint: Net Investment <= Adjusted Budget
+prob += pulp.lpSum([df.loc[i, 'Capex'] * select[i] for i in df.index]) <= total_budget * (1 - risk_buffer)
+prob.solve(pulp.PULP_CBC_CMD(msg=0))
+
+df['Decision'] = [int(select[i].varValue) for i in df.index]
+
+with tabs[0]:
+    st.header("Executive Summary")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    funded = df[df['Decision'] == 1]
+    
+    col1.metric("Projects Selected", f"{len(funded)} / {len(df)}")
+    col2.metric("Capital Utilization", f"₹{funded['Capex'].sum()/1e6:.1f}M", f"{funded['Capex'].sum()/total_budget*100:.1f}%")
+    col3.metric("Projected Wealth Creation", f"₹{funded['NPV'].sum()/1e6:.1f}M")
+    col4.metric("Avg. Profitability Index", f"{funded['PI'].mean():.2f}")
+
+    st.subheader("Recommended Capital Schedule")
+    st.dataframe(df.style.background_gradient(subset=['PI', 'Decision'], cmap='Blues'), use_container_width=True)
+    
+    
+
+with tabs[1]:
+    st.header("Financial Risk Topology")
+    
+    # Efficient Frontier Visualization
+    fig = px.scatter(df, x="Beta_Risk", y="PI", size="Capex", color="Decision", 
+                     symbol="Sector", text="Project_ID",
+                     title="Capital Efficiency (PI) vs. Systematic Risk (Beta)")
+    
+    fig.add_hline(y=1.0, line_dash="dash", line_color="#ef4444", annotation_text="Value Destruction Zone")
+    fig.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)")
+    st.plotly_chart(fig, use_container_width=True)
+    
+    
+
+with tabs[2]:
+    st.header("Audit-Ready Investment Memos")
+    for _, row in funded.iterrows():
+        with st.expander(f"📑 APPROVAL MEMO: {row['Project_ID']} | Sector: {row['Sector']}"):
+            st.markdown(f"""
+            **Fiscal Justification:**
+            The project demonstrates a **Profitability Index of {row['PI']}**, indicating that for every 1 Rupee invested, the firm generates {row['PI']} Rupees in present value. 
             
-        if st.button("Initialize Engine"):
-            # Placeholder for demo - in production, you'd process the files here
-            st.session_state['data_loaded'] = True
-            st.success("AI Model Trained Successfully!")
-
-    elif nav == "2. Performance Dashboard":
-        st.header("Executive Insights")
-        if 'data_loaded' not in st.session_state:
-            st.warning("Please initialize data in the 'Data Intake' section.")
-        else:
-            # Generate Dummy Data for Visualization
-            metrics_cols = st.columns(3)
-            metrics_cols[0].metric("Allocation Efficiency", "94.2%", "+2.1%")
-            metrics_cols[1].metric("Portfolio NPV", "₹4.8M", "Forecasted")
-            metrics_cols[2].metric("Risk Exposure", "Low-Mid", "Optimized")
+            **Risk Sensitivity:**
+            With a Beta of {row['Beta_Risk']}, the project has a 5% Value-at-Risk (VaR) of ₹{abs(row['VaR_WorstCase'])/1e6:.2f}M under extreme market stress.
             
-            # Waterfall Chart Simulation
-            fig = go.Figure(go.Waterfall(
-                x = ["Proposed", "Risk Adj", "Cost Offset", "Optimized Total"],
-                y = [5000000, -400000, -200000, 4400000],
-                measure = ["relative", "relative", "relative", "total"]
-            ))
-            fig.update_layout(template="plotly_dark", title="Capital Value Bridge")
-            st.plotly_chart(fig, use_container_width=True)
-
-    elif nav == "3. Strategic Portfolio":
-        st.header("Recommended Allocations")
-        # Visualizing the selection results
-        st.markdown("#### Approved Projects for Funding")
-        dummy_df = pd.DataFrame({
-            "Project ID": ["EF-001", "EF-042", "EF-089"],
-            "Department": ["R&D", "Ops", "Tech"],
-            "Investment": [1200000, 800000, 2500000],
-            "Est. NPV": [450000, 310000, 890000]
-        })
-        st.table(dummy_df)
-        
-    elif nav == "4. Scenario Lab":
-        st.header("What-If Simulation")
-        st.write("Compare different budget levels and hurdle rates below.")
-        # Radar Chart for Portfolio Quality
-        categories = ['Strategic Fit', 'ROI Potential', 'Risk Mitigation', 'Cash Flow Speed']
-        fig = go.Figure()
-        fig.add_trace(go.Scatterpolar(r=[8, 9, 7, 6], theta=categories, fill='toself', name='Scenario A'))
-        fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 10])), template="plotly_dark")
-        st.plotly_chart(fig, use_container_width=True)
-
-if __name__ == "__main__":
-    main()
+            **Strategic Recommendation:** Proceed with full funding. Immediate NPV accretion expected upon deployment.
+            """)
