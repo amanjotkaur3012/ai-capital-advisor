@@ -184,23 +184,44 @@ def main():
         ))
         st.plotly_chart(fig_wat, use_container_width=True)
 
-    with t3:
+   with t3:
         st.subheader("AI Institutional Intelligence")
-        target_p = st.selectbox("Select Project for AI Memo", selected['Project_ID'])
+        target_p = st.selectbox("Select Project for AI Deep Dive", selected['Project_ID'])
         row = selected[selected['Project_ID'] == target_p].iloc[0]
         
         if st.button("Generate Memo"):
             with st.spinner("Consulting AI..."):
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                prompt = f"""
-                Act as a Senior Investment Analyst. 
-                Project: {target_p} in {row['Department']}. 
-                Finance Metrics: Strategic NPV ${row['Strategic_NPV']:.2f}, ESG Score {row['ESG_Score']}/10, RAROC {row['RAROC']:.2%}.
-                Market Context: 10Y Yield at {rf_rate*100}%, Volatility Shock Level {vol_stress}.
-                Write a professional 2-sentence investment thesis and 1 critical risk factor.
-                """
-                response = model.generate_content(prompt)
-                st.info(response.text)
+                try:
+                    # DYNAMIC MODEL SELECTION
+                    # This fetches the models actually available to your specific API key
+                    available_models = [m.name for m in genai.list_models() 
+                                      if 'generateContent' in m.supported_generation_methods]
+                    
+                    # Selection Priority: Flash 1.5 -> Pro 1.5 -> Any available
+                    if 'models/gemini-1.5-flash' in available_models:
+                        model_id = 'gemini-1.5-flash'
+                    elif 'models/gemini-1.5-pro' in available_models:
+                        model_id = 'gemini-1.5-pro'
+                    else:
+                        model_id = available_models[0].split('/')[-1]
+
+                    model = genai.GenerativeModel(model_id)
+                    
+                    prompt = f"""
+                    Act as a Senior Investment Analyst. 
+                    Project: {target_p} in {row['Department']}. 
+                    Finance Metrics: Strategic NPV ${row['Strategic_NPV']:.2f}, ESG Score {row['ESG_Score']}/10, RAROC {row['RAROC']:.2%}.
+                    Market Context: 10Y Yield at {rf_rate*100}%, Volatility Shock Level {vol_stress}.
+                    Write a professional 2-sentence investment thesis and 1 critical risk factor.
+                    """
+                    
+                    response = model.generate_content(prompt)
+                    st.info(f"Analysis via {model_id.upper()}:")
+                    st.write(response.text)
+                    
+                except Exception as e:
+                    st.error(f"AI Connection Error: {str(e)}")
+                    st.warning("Hint: Check if 'Generative Language API' is enabled in your Google Cloud Console.")
         
         # Download Section
         st.write("---")
