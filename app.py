@@ -190,7 +190,7 @@ def main():
         if st.button("Consult AI Analyst"):
             with st.spinner("Accessing LLM Logic..."):
                 try:
-                    # DYNAMIC DISCOVERY: Fixes NotFound traceback
+                    # DYNAMIC DISCOVERY
                     m_list = genai.list_models()
                     available = [m.name for m in m_list if 'generateContent' in m.supported_generation_methods]
                     m_name = "gemini-1.5-flash" if f"models/gemini-1.5-flash" in available else available[0].replace("models/", "")
@@ -200,8 +200,13 @@ def main():
                     response = model.generate_content(prompt)
                     st.success(f"Analyst: {m_name.upper()}")
                     st.write(response.text)
+                
                 except Exception as e:
-                    st.error(f"AI Connection Error: {e}")
+                    if "429" in str(e):
+                        st.error("⚠️ **Rate Limit Reached (429):** The AI analyst is currently over-capacity. Please wait 60 seconds before generating another memo.")
+                        st.info("Tip for Assignment: In a production environment, we would implement an asynchronous queue or a paid tier to handle high request volumes.")
+                    else:
+                        st.error(f"AI Connection Error: {e}")
 
 if __name__ == "__main__":
     main()
