@@ -155,7 +155,7 @@ def main():
 
     elif nav == " ML INTELLIGENCE":
 
-    st.markdown('<div class="section-header">PREDICTIVE ROI LOGIC</div>', unsafe_allow_html=True)
+      st.markdown('<div class="section-header">PREDICTIVE ROI LOGIC</div>', unsafe_allow_html=True)
 
     # =========================================================
     # 1. FEATURE IMPORTANCE (WITH PARETO + EXECUTIVE CALLOUT)
@@ -299,7 +299,7 @@ def main():
 
     st.plotly_chart(fig_radar, use_container_width=True)
 
-
+     
 
     elif nav == " SENSITIVITY":
         st.markdown('<div class="section-header">VALUE SENSITIVITY: BUDGET VS SUSTAINABILITY</div>', unsafe_allow_html=True)
