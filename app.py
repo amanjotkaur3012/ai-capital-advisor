@@ -35,8 +35,6 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; background-color: #0d1117; }
     .stApp { background-color: #0d1117; color: #f0f6fc; }
-    
-    /* Executive Titles */
     .main-title { 
         font-size: 52px !important; font-weight: 800; letter-spacing: -2.5px; 
         background: linear-gradient(90deg, #58a6ff, #10b981);
@@ -44,29 +42,21 @@ st.markdown("""
         margin-bottom: 0px;
     }
     .sub-text { color: #8b949e; font-size: 20px; margin-bottom: 30px; }
-    
-    /* Bold Section Headers */
     .section-header { 
         font-size: 28px; font-weight: 700; color: #ffffff; 
         border-left: 8px solid #238636; padding-left: 15px; margin: 40px 0 20px 0;
     }
-
-    /* High-Visibility Metric Cards */
     div[data-testid="stMetric"] {
         background: #161b22; border: 2px solid #30363d; border-radius: 12px; padding: 30px;
         box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
     div[data-testid="stMetricValue"] { font-size: 42px !important; color: #ffffff !important; font-weight: 800; }
     div[data-testid="stMetricLabel"] { font-size: 18px !important; color: #58a6ff !important; text-transform: uppercase; font-weight: 600; }
-
-    /* AI Explainer Box */
     .ai-insight-box {
         background: rgba(88, 166, 255, 0.15); border: 1px solid #58a6ff;
         padding: 25px; border-radius: 10px; color: #f0f6fc; margin: 20px 0;
         font-size: 17px; line-height: 1.6;
     }
-    
-    /* Sidebar Navigator */
     section[data-testid="stSidebar"] { background-color: #010409 !important; border-right: 2px solid #30363d; }
     </style>
 """, unsafe_allow_html=True)
@@ -111,7 +101,7 @@ def main():
         budget = st.number_input("Capital Constraint ($)", value=5500000, step=500000)
         esg_min = st.slider("Sustainability Hurdle (ESG)", 1, 10, 6)
 
-    # Dataset Preparation
+    # Dataset Setup
     if up_file:
         df = pd.read_csv(up_file)
     else:
@@ -162,11 +152,11 @@ def main():
         st.markdown('<div class="section-header">FUNDING SCHEDULE</div>', unsafe_allow_html=True)
         st.dataframe(selected[['Project_ID', 'Department', 'Investment_Capital', 'Pred_ROI', 'PI', 'ESG_Score']].style.background_gradient(cmap='Greens'), use_container_width=True)
         
-        if st.button("🤖 AI Expert: Explain Portfolio Performance"):
+        if st.button("🤖 AI Expert: Explain Portfolio Health"):
             with st.spinner("AI analyzing balance..."):
                 try:
                     model = genai.GenerativeModel("gemini-1.5-flash")
-                    res = model.generate_content(f"Explain this portfolio health to a CEO: Budget ${selected['Investment_Capital'].sum()}, Value ${selected['Strategic_Value'].sum()}, ESG {selected['ESG_Score'].mean():.1f}. Focus on wealth creation.")
+                    res = model.generate_content(f"Explain this portfolio summary to a CEO: Budget ${selected['Investment_Capital'].sum()}, Value ${selected['Strategic_Value'].sum()}, ESG {selected['ESG_Score'].mean():.1f}. Focus on wealth creation.")
                     st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
                 except: st.warning("AI cooling down (60s).")
 
@@ -182,15 +172,18 @@ def main():
             st.plotly_chart(px.scatter(df, x="ESG_Score", y="Strategic_Value", size="Investment_Capital", color="Selected", color_discrete_map={1:'#58a6ff', 0:'#30363d'}), use_container_width=True)
         
         st.markdown('<div class="section-header">ESG PILLAR RADAR</div>', unsafe_allow_html=True)
+        
         p_means = selected[['E_Score', 'S_Score', 'G_Score']].mean().reset_index()
         p_means.columns = ['Pillar', 'Score']
-                st.plotly_chart(px.line_polar(p_means, r='Score', theta='Pillar', line_close=True, range_r=[0,10], color_discrete_sequence=['#238636']), use_container_width=True)
+        st.plotly_chart(px.line_polar(p_means, r='Score', theta='Pillar', line_close=True, range_r=[0,10], color_discrete_sequence=['#238636']), use_container_width=True)
         
         if st.button("🤖 AI Expert: Explain the Machine Learning Logic"):
             with st.spinner("Decoding ML..."):
-                model = genai.GenerativeModel("gemini-1.5-flash")
-                res = model.generate_content("Explain 'Feature Importance' and 'ESG Pillars' in simple words to an investor.")
-                st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
+                try:
+                    model = genai.GenerativeModel("gemini-1.5-flash")
+                    res = model.generate_content("Explain 'Feature Importance' and 'ESG Pillars' in simple words to an investor.")
+                    st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
+                except: st.warning("AI cooling down.")
 
     elif nav == "📊 SENSITIVITY":
         st.markdown('<div class="section-header">VALUE SENSITIVITY: BUDGET VS SUSTAINABILITY</div>', unsafe_allow_html=True)
@@ -203,7 +196,8 @@ def main():
                 temp = run_optimization(df.copy(), b, e)
                 row.append(temp[temp['Selected'] == 1]['Strategic_Value'].sum())
             h_map.append(row)
-                st.plotly_chart(px.imshow(h_map, x=[f"ESG {e:.1f}" for e in e_range], y=[f"${b/1e6:.1f}M" for b in b_range], color_continuous_scale='RdYlGn'), use_container_width=True)
+        
+        st.plotly_chart(px.imshow(h_map, x=[f"ESG {e:.1f}" for e in e_range], y=[f"${b/1e6:.1f}M" for b in b_range], color_continuous_scale='RdYlGn'), use_container_width=True)
         
         st.markdown('<div class="section-header">3-YEAR CASH OUTLAY SCHEDULE</div>', unsafe_allow_html=True)
         selected['Y1'] = selected['Investment_Capital'] * selected['Phase_1_Cap']
@@ -215,19 +209,22 @@ def main():
         
         if st.button("🤖 AI Expert: Explain Value Sensitivity"):
             with st.spinner("Analyzing trade-offs..."):
-                model = genai.GenerativeModel("gemini-1.5-flash")
-                res = model.generate_content("Explain how the Budget-ESG heatmap helps a CFO find the optimal 'Sweet Spot' for investments.")
-                st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
+                try:
+                    model = genai.GenerativeModel("gemini-1.5-flash")
+                    res = model.generate_content("Explain how the Budget-ESG heatmap helps a CFO find the optimal 'Sweet Spot' for investments.")
+                    st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
+                except: st.warning("AI cooling down.")
 
     elif nav == "🛡️ RISK MANAGEMENT":
         st.markdown('<div class="section-header">STRATEGIC RISK-RETURN QUADRANT</div>', unsafe_allow_html=True)
-                m_r, m_p = df['Risk_Score'].median(), df['PI'].median()
+        
+        m_r, m_p = df['Risk_Score'].median(), df['PI'].median()
         fig_q = px.scatter(df, x="Risk_Score", y="PI", color="Selected", size="Investment_Capital", text="Project_ID", color_discrete_map={1:'#238636', 0:'#30363d'})
         fig_q.add_hrect(y0=m_p, y1=df['PI'].max()*1.2, x0=0, x1=m_r, fillcolor="green", opacity=0.08, layer="below", annotation_text="STRATEGIC CORE")
         fig_q.add_hrect(y0=0, y1=m_p, x0=m_r, x1=10, fillcolor="red", opacity=0.08, layer="below", annotation_text="VALUE TRAPS")
         st.plotly_chart(fig_q, use_container_width=True)
         
-        st.markdown('<div class="section-header">DOWNSIDE RISK Snapshot (VaR & Sharpe)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">DOWNSIDE RISK (VaR & SHARPE)</div>', unsafe_allow_html=True)
         mu_p = (selected['Pred_ROI'] / 100).mean()
         sig_p = (selected['Pred_ROI'] / 100).std()
         k1, k2 = st.columns(2)
@@ -236,9 +233,11 @@ def main():
 
         if st.button("🤖 AI Expert: Explain Risk Exposure"):
             with st.spinner("Decoding Risk..."):
-                model = genai.GenerativeModel("gemini-1.5-flash")
-                res = model.generate_content("Explain the 'Strategic Core' vs 'Value Traps'. Why should we avoid the bottom-right quadrant?")
-                st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
+                try:
+                    model = genai.GenerativeModel("gemini-1.5-flash")
+                    res = model.generate_content("Explain the 'Strategic Core' vs 'Value Traps'. Why should we avoid the bottom-right quadrant?")
+                    st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
+                except: st.warning("AI cooling down.")
 
     elif nav == "🖋️ INSTITUTIONAL THESIS":
         st.markdown('<div class="section-header">PROJECT DEEP-DIVE THESIS</div>', unsafe_allow_html=True)
