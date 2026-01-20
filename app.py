@@ -130,6 +130,7 @@ def main():
     st.markdown('<p class="main-title">STRATOS | Capital Allocation Advisor</p>', unsafe_allow_html=True)
     st.markdown('<p class="sub-text">AI-Driven Multi-Criteria Decision Support</p>', unsafe_allow_html=True)
 
+    # PAGE ROUTING
     if nav == "SUMMARY":
         st.markdown('<div class="section-header">PORTFOLIO AGGREGATE PERFORMANCE</div>', unsafe_allow_html=True)
         c1, c2, c3, c4 = st.columns(4)
@@ -141,13 +142,13 @@ def main():
         st.markdown('<div class="section-header">FUNDING SCHEDULE</div>', unsafe_allow_html=True)
         st.dataframe(selected[['Project_ID', 'Department', 'Investment_Capital', 'Pred_ROI', 'PI', 'ESG_Score']].style.background_gradient(cmap='Greens'), use_container_width=True)
         
-        if st.button("Portfolio Health"):
+        if st.button("Interpret Summary"):
             with st.spinner("AI analyzing balance..."):
                 try:
                     model = genai.GenerativeModel("gemini-1.5-flash")
                     res = model.generate_content(f"Explain this portfolio summary to a CEO: Budget ${selected['Investment_Capital'].sum()}, Value ${selected['Strategic_Value'].sum()}, ESG {selected['ESG_Score'].mean():.1f}. Focus on wealth creation.")
                     st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
-                except: st.warning("AI cooling down (60s).")
+                except: st.warning("AI cooling down.")
 
     elif nav == " ML INTELLIGENCE":
         st.markdown('<div class="section-header">PREDICTIVE ROI LOGIC</div>', unsafe_allow_html=True)
@@ -165,11 +166,11 @@ def main():
         p_means.columns = ['Pillar', 'Score']
         st.plotly_chart(px.line_polar(p_means, r='Score', theta='Pillar', line_close=True, range_r=[0,10], color_discrete_sequence=['#238636']), use_container_width=True)
         
-        if st.button("Machine Learning Logic"):
+        if st.button("Interpret ML Intelligence"):
             with st.spinner("Decoding ML..."):
                 try:
                     model = genai.GenerativeModel("gemini-1.5-flash")
-                    res = model.generate_content("Explain 'Feature Importance' and 'ESG Pillars' in simple words to an investor.")
+                    res = model.generate_content(f"Analyze these ML results for an investor: Top drivers are {feat_imp.nlargest(2, 'Importance')['Feature'].tolist()}. ESG Radar averages are {p_means['Score'].tolist()}.")
                     st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
                 except: st.warning("AI cooling down.")
 
@@ -195,6 +196,14 @@ def main():
         ph_sum.columns = ['Year', 'Outlay']
         st.plotly_chart(px.area(ph_sum, x='Year', y='Outlay', color_discrete_sequence=['#1f6feb']), use_container_width=True)
 
+        if st.button("Interpret Sensitivity"):
+            with st.spinner("Analyzing trade-offs..."):
+                try:
+                    model = genai.GenerativeModel("gemini-1.5-flash")
+                    res = model.generate_content(f"Explain the sensitivity heatmap. Budget is ${budget} and ESG hurdle is {esg_min}. How does changing these impact the ${selected['Strategic_Value'].sum()} total value?")
+                    st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
+                except: st.warning("AI cooling down.")
+
     elif nav == " RISK MANAGEMENT":
         st.markdown('<div class="section-header">STRATEGIC RISK-RETURN QUADRANT</div>', unsafe_allow_html=True)
         m_r, m_p = df['Risk_Score'].median(), df['PI'].median()
@@ -210,16 +219,24 @@ def main():
         k1.metric("VAR (95% CONFIDENCE)", f"{norm.ppf(0.05, mu_p, sig_p):.2%}")
         k2.metric("SHARPE RATIO AVG", f"{selected['Sharpe_Score'].mean():.2f}")
 
+        if st.button("Interpret Risk Exposure"):
+            with st.spinner("Decoding Risk..."):
+                try:
+                    model = genai.GenerativeModel("gemini-1.5-flash")
+                    res = model.generate_content(f"Analyze risk for a CFO. Portfolio VaR is {norm.ppf(0.05, mu_p, sig_p):.2%} and Sharpe Ratio is {selected['Sharpe_Score'].mean():.2f}. Explain what this means for capital safety.")
+                    st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
+                except: st.warning("AI cooling down.")
+
     elif nav == " INSTITUTIONAL THESIS":
         st.markdown('<div class="section-header">PROJECT DEEP-DIVE THESIS</div>', unsafe_allow_html=True)
         target = st.selectbox("SELECT PROJECT FOR QUANT ANALYSIS", selected['Project_ID'])
         r = selected[selected['Project_ID'] == target].iloc[0]
         
-        if st.button("EXECUTE INSTITUTIONAL ANALYSIS"):
+        if st.button("Interpret Project Thesis"):
             with st.spinner("AI Quant at work..."):
                 try:
                     model = genai.GenerativeModel("gemini-1.5-flash")
-                    res = model.generate_content(f"Deep Quant analysis for {target}. Value ${r['Strategic_Value']:.2f}, PI {r['PI']:.2f}, Sharpe {r['Sharpe_Score']:.2f}. Write a 3-bullet thesis.")
+                    res = model.generate_content(f"Deep Quant analysis for project {target}. Strategic Value ${r['Strategic_Value']:.2f}, Profitability Index {r['PI']:.2f}, Risk Score {r['Risk_Score']:.1f}. Provide a professional investment thesis.")
                     st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
                 except: st.error("AI rate limit. Wait 60s.")
 
