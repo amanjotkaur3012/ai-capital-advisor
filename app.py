@@ -1,4 +1,4 @@
-# =========================================================
+okay just red these -- # =========================================================
 # STRATOS QUANT | Executive Decision Support System
 # Author: Aman
 # =========================================================
@@ -151,52 +151,113 @@ def main():
                 except: st.warning("AI cooling down.")
 
     elif nav == " ML INTELLIGENCE":
-        st.markdown('<div class="section-header">PREDICTIVE ROI LOGIC</div>', unsafe_allow_html=True)
-        col_l, col_r = st.columns(2)
-        with col_l:
-            st.write("**DRIVERS OF VALUE (FEATURE IMPORTANCE)**")
-            feat_imp = pd.DataFrame({
-                'Feature': feats,
-                'Importance': rf_model.feature_importances_
-            }).sort_values("Importance", ascending=True)
 
-            feat_imp['Contribution_%'] = (feat_imp['Importance'] / feat_imp['Importance'].sum()) * 100
+    st.markdown('<div class="section-header">PREDICTIVE ROI LOGIC</div>', unsafe_allow_html=True)
 
-            fig_imp = px.bar(
-                feat_imp,
-                x="Contribution_%",
-                y="Feature",
-                orientation="h",
-                text=feat_imp["Contribution_%"].round(1).astype(str) + "%",
-                title="What Actually Drives ROI Prediction",
-            )
-            fig_imp.update_layout(xaxis_title="Contribution to ROI Prediction (%)", yaxis_title="", title_font_size=18)
-            st.plotly_chart(fig_imp, use_container_width=True)
+    # ============================================================
+    # 1. FEATURE IMPORTANCE — INTERPRETABLE
+    # ============================================================
 
-        with col_r:
-            st.write("**EFFICIENCY FRONTIER**")
-            median_esg = df["ESG_Score"].median()
-            median_val = df["Strategic_Value"].median()
+    col_l, col_r = st.columns(2)
 
-            fig_eff = px.scatter(
-                df,
-                x="ESG_Score",
-                y="Strategic_Value",
-                size="Investment_Capital",
-                color="Selected",
-                hover_data=["Project_ID", "Pred_ROI", "PI"],
-                title="Value vs Sustainability Trade-off Map",
-                color_discrete_map={1:'#58a6ff', 0:'#30363d'}
-            )
-            fig_eff.update_layout(xaxis_title="ESG Quality", yaxis_title="Strategic Value ($)", title_font_size=18)
-            st.plotly_chart(fig_eff, use_container_width=True)
+    with col_l:
+        st.write("**WHAT DRIVES ROI (MODEL INTERPRETATION)**")
 
-        st.markdown('<div class="section-header">ESG PILLAR RADAR</div>', unsafe_allow_html=True)
-        p_means = selected[['E_Score', 'S_Score', 'G_Score']].mean().reset_index()
-        p_means.columns = ['Pillar', 'Score']
-        
-        fig_radar = px.line_polar(p_means, r='Score', theta='Pillar', line_close=True, range_r=[0,10], title="ESG Balance Profile")
-        st.plotly_chart(fig_radar, use_container_width=True)
+        feat_imp = pd.DataFrame({
+            'Feature': feats,
+            'Importance': rf_model.feature_importances_
+        }).sort_values("Importance", ascending=True)
+
+        feat_imp['Contribution_%'] = (feat_imp['Importance'] / feat_imp['Importance'].sum()) * 100
+
+        fig_imp = px.bar(
+            feat_imp,
+            x="Contribution_%",
+            y="Feature",
+            orientation="h",
+            text=feat_imp["Contribution_%"].round(1).astype(str) + "%",
+            title="Relative Contribution to ROI Prediction",
+        )
+
+        fig_imp.add_vline(
+            x=feat_imp["Contribution_%"].mean(),
+            line_dash="dash",
+            annotation_text="Average Influence",
+            opacity=0.4
+        )
+
+        fig_imp.update_layout(
+            xaxis_title="Contribution to ROI Prediction (%)",
+            yaxis_title="",
+            title_font_size=16
+        )
+
+        st.plotly_chart(fig_imp, use_container_width=True)
+
+        top_driver = feat_imp.iloc[-1]['Feature']
+        st.caption(
+            f"📌 **Model Insight:** ROI predictions are primarily driven by **{top_driver}**. "
+            f"Capital efficiency is more sensitive to this factor than others."
+        )
+
+    # ============================================================
+    # 2. EFFICIENCY FRONTIER — DECISION MAP
+    # ============================================================
+
+    with col_r:
+        st.write("**VALUE vs ESG DECISION MAP**")
+
+        median_esg = df["ESG_Score"].median()
+        median_val = df["Strategic_Value"].median()
+
+        fig_eff = px.scatter(
+            df,
+            x="ESG_Score",
+            y="Strategic_Value",
+            size="Investment_Capital",
+            color="Selected",
+            hover_data=["Project_ID", "Pred_ROI", "PI"],
+            title="Value–Sustainability Trade-off",
+            color_discrete_map={1:'#58a6ff', 0:'#30363d'}
+        )
+
+        fig_eff.add_hline(
+            y=median_val, line_dash="dot",
+            annotation_text="High Value Zone"
+        )
+
+        fig_eff.add_vline(
+            x=median_esg, line_dash="dot",
+            annotation_text="High ESG Zone"
+        )
+
+        fig_eff.update_layout(
+            xaxis_title="ESG Quality (Higher = Better)",
+            yaxis_title="Strategic Value ($)",
+            title_font_size=16
+        )
+
+        st.plotly_chart(fig_eff, use_container_width=True)
+
+        st.caption(
+            "🧭 **Interpretation:** Top-right quadrant = projects creating strong value while meeting ESG goals. "
+            "Bottom-left quadrant = candidates for rejection or redesign."
+        )
+
+    # ============================================================
+    # 3. ESG RADAR — BALANCE DIAGNOSTIC
+    # ============================================================
+
+    st.markdown('<div class="section-header">ESG BALANCE DIAGNOSTIC</div>', unsafe_allow_html=True)
+
+    p_means = selected[['E_Score', 'S_Score', 'G_Score']].mean().reset_index()
+    p_means.columns = ['Pillar', 'Score']
+
+    avg_esg = p_means["Score"].mean()
+    imbalance = p_means["Score"].max() - p_means["Score"].min()
+
+    fig_radar = px.line_polar(
+
 
     elif nav == " SENSITIVITY":
         st.markdown('<div class="section-header">VALUE SENSITIVITY: BUDGET VS SUSTAINABILITY</div>', unsafe_allow_html=True)
@@ -211,17 +272,45 @@ def main():
             h_map.append(row)
         
         st.plotly_chart(px.imshow(h_map, x=[f"ESG {e:.1f}" for e in e_range], y=[f"${b/1e6:.1f}M" for b in b_range], color_continuous_scale='RdYlGn'), use_container_width=True)
+        
+        st.markdown('<div class="section-header">3-YEAR CASH OUTLAY SCHEDULE</div>', unsafe_allow_html=True)
+        selected['Y1'] = selected['Investment_Capital'] * selected['Phase_1_Cap']
+        selected['Y2'] = selected['Investment_Capital'] * selected['Phase_2_Cap']
+        selected['Y3'] = selected['Investment_Capital'] - (selected['Y1'] + selected['Y2'])
+        ph_sum = selected[['Y1', 'Y2', 'Y3']].sum().reset_index()
+        ph_sum.columns = ['Year', 'Outlay']
+        st.plotly_chart(px.area(ph_sum, x='Year', y='Outlay', color_discrete_sequence=['#1f6feb']), use_container_width=True)
+
+        if st.button("Interpret Sensitivity"):
+            with st.spinner("Analyzing trade-offs..."):
+                try:
+                    model = genai.GenerativeModel("gemini-1.5-flash")
+                    res = model.generate_content(f"Explain the sensitivity heatmap. Budget is ${budget} and ESG hurdle is {esg_min}. How does changing these impact the ${selected['Strategic_Value'].sum()} total value?")
+                    st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
+                except: st.warning("AI cooling down.")
 
     elif nav == " RISK MANAGEMENT":
         st.markdown('<div class="section-header">STRATEGIC RISK-RETURN QUADRANT</div>', unsafe_allow_html=True)
+        m_r, m_p = df['Risk_Score'].median(), df['PI'].median()
         fig_q = px.scatter(df, x="Risk_Score", y="PI", color="Selected", size="Investment_Capital", text="Project_ID", color_discrete_map={1:'#238636', 0:'#30363d'})
+        fig_q.add_hrect(y0=m_p, y1=df['PI'].max()*1.2, x0=0, x1=m_r, fillcolor="green", opacity=0.08, layer="below", annotation_text="STRATEGIC CORE")
+        fig_q.add_hrect(y0=0, y1=m_p, x0=m_r, x1=10, fillcolor="red", opacity=0.08, layer="below", annotation_text="VALUE TRAPS")
         st.plotly_chart(fig_q, use_container_width=True)
         
+        st.markdown('<div class="section-header">DOWNSIDE RISK (VaR & SHARPE)</div>', unsafe_allow_html=True)
         mu_p = (selected['Pred_ROI'] / 100).mean()
         sig_p = (selected['Pred_ROI'] / 100).std()
         k1, k2 = st.columns(2)
         k1.metric("VAR (95% CONFIDENCE)", f"{norm.ppf(0.05, mu_p, sig_p):.2%}")
         k2.metric("SHARPE RATIO AVG", f"{selected['Sharpe_Score'].mean():.2f}")
+
+        if st.button("Interpret Risk Exposure"):
+            with st.spinner("Decoding Risk..."):
+                try:
+                    model = genai.GenerativeModel("gemini-1.5-flash")
+                    res = model.generate_content(f"Analyze risk for a CFO. Portfolio VaR is {norm.ppf(0.05, mu_p, sig_p):.2%} and Sharpe Ratio is {selected['Sharpe_Score'].mean():.2f}. Explain what this means for capital safety.")
+                    st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
+                except: st.warning("AI cooling down.")
 
     elif nav == " INSTITUTIONAL THESIS":
         st.markdown('<div class="section-header">PROJECT DEEP-DIVE THESIS</div>', unsafe_allow_html=True)
@@ -232,7 +321,7 @@ def main():
             with st.spinner("AI Quant at work..."):
                 try:
                     model = genai.GenerativeModel("gemini-1.5-flash")
-                    res = model.generate_content(f"Deep Quant analysis for project {target}. Strategic Value ${r['Strategic_Value']:.2f}, PI {r['PI']:.2f}. Provide thesis.")
+                    res = model.generate_content(f"Deep Quant analysis for project {target}. Strategic Value ${r['Strategic_Value']:.2f}, Profitability Index {r['PI']:.2f}, Risk Score {r['Risk_Score']:.1f}. Provide a professional investment thesis.")
                     st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
                 except: st.error("AI rate limit. Wait 60s.")
 
