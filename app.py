@@ -1,12 +1,5 @@
 # =========================================================
-# FINCAP-AI | Intelligent Capital Allocation Advisor
-# MSc Finance & Analytics | Executive Decision Support
-# Author: Aman
-# =========================================================
-
-# =========================================================
 # STRATOS QUANT | Executive Decision Support System
-# MSc Finance & Analytics Institutional Grade Dashboard
 # Author: Aman
 # =========================================================
 
@@ -27,7 +20,7 @@ GEMINI_API_KEY = "AIzaSyBE3o8PdFRbFoPhRBeQ8MvFR1ImNMpmzu4"
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
-st.set_page_config(page_title="STRATOS QUANT | MSc Capital Advisor", layout="wide")
+st.set_page_config(page_title="STRATOS QUANT ", layout="wide")
 
 # INSTITUTIONAL HIGH-CONTRAST CSS
 st.markdown("""
@@ -89,12 +82,12 @@ def main():
     with st.sidebar:
         st.markdown("<h1 style='color:#58a6ff; font-size:36px; font-weight:800;'>TERMINAL</h1>", unsafe_allow_html=True)
         nav = st.radio("SELECT ANALYTIC VIEW", 
-                       ["🚀 EXECUTIVE SUMMARY", "🧠 ML INTELLIGENCE", "📊 SENSITIVITY", "🛡️ RISK MANAGEMENT", "🖋️ INSTITUTIONAL THESIS"])
+                       ["SUMMARY", " ML INTELLIGENCE", " SENSITIVITY", " RISK MANAGEMENT", " INSTITUTIONAL THESIS"])
         
         st.markdown("---")
         st.header("DATA OPS")
         up_file = st.file_uploader("Upload Proposals", type="csv")
-        use_demo = st.checkbox("Load MSc Benchmark Data", value=not up_file)
+        use_demo = st.checkbox("Load Demo Data", value=not up_file)
         
         st.header("MARKET BENCHMARKS")
         rf_rate = st.slider("Risk-Free Rate (%)", 0.0, 8.0, 4.2) / 100
@@ -135,13 +128,13 @@ def main():
 
     # TOP BRANDING
     st.markdown('<p class="main-title">STRATOS | Capital Allocation Advisor</p>', unsafe_allow_html=True)
-    st.markdown('<p class="sub-text">MSc Finance Analytics: AI-Driven Multi-Criteria Decision Support</p>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-text">AI-Driven Multi-Criteria Decision Support</p>', unsafe_allow_html=True)
 
     # ----------------------------------------------------
     # DYNAMIC PAGE ROUTING
     # ----------------------------------------------------
 
-    if nav == "🚀 EXECUTIVE SUMMARY":
+    if nav == "SUMMARY":
         st.markdown('<div class="section-header">PORTFOLIO AGGREGATE PERFORMANCE</div>', unsafe_allow_html=True)
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("CAPITAL DEPLOYED", f"${selected['Investment_Capital'].sum():,.0f}")
@@ -152,7 +145,7 @@ def main():
         st.markdown('<div class="section-header">FUNDING SCHEDULE</div>', unsafe_allow_html=True)
         st.dataframe(selected[['Project_ID', 'Department', 'Investment_Capital', 'Pred_ROI', 'PI', 'ESG_Score']].style.background_gradient(cmap='Greens'), use_container_width=True)
         
-        if st.button("🤖 AI Expert: Explain Portfolio Health"):
+        if st.button("Portfolio Health"):
             with st.spinner("AI analyzing balance..."):
                 try:
                     model = genai.GenerativeModel("gemini-1.5-flash")
@@ -160,7 +153,7 @@ def main():
                     st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
                 except: st.warning("AI cooling down (60s).")
 
-    elif nav == "🧠 ML INTELLIGENCE":
+    elif nav == " ML INTELLIGENCE":
         st.markdown('<div class="section-header">PREDICTIVE ROI LOGIC</div>', unsafe_allow_html=True)
         col_l, col_r = st.columns(2)
         with col_l:
@@ -177,7 +170,7 @@ def main():
         p_means.columns = ['Pillar', 'Score']
         st.plotly_chart(px.line_polar(p_means, r='Score', theta='Pillar', line_close=True, range_r=[0,10], color_discrete_sequence=['#238636']), use_container_width=True)
         
-        if st.button("🤖 AI Expert: Explain the Machine Learning Logic"):
+        if st.button("Machine Learning Logic"):
             with st.spinner("Decoding ML..."):
                 try:
                     model = genai.GenerativeModel("gemini-1.5-flash")
@@ -185,7 +178,7 @@ def main():
                     st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
                 except: st.warning("AI cooling down.")
 
-    elif nav == "📊 SENSITIVITY":
+    elif nav == " SENSITIVITY":
         st.markdown('<div class="section-header">VALUE SENSITIVITY: BUDGET VS SUSTAINABILITY</div>', unsafe_allow_html=True)
         b_range = np.linspace(budget * 0.8, budget * 1.2, 5)
         e_range = np.linspace(4, 9, 5)
@@ -207,7 +200,7 @@ def main():
         ph_sum.columns = ['Year', 'Outlay']
         st.plotly_chart(px.area(ph_sum, x='Year', y='Outlay', color_discrete_sequence=['#1f6feb']), use_container_width=True)
         
-        if st.button("🤖 AI Expert: Explain Value Sensitivity"):
+        if st.button("Value Sensitivity"):
             with st.spinner("Analyzing trade-offs..."):
                 try:
                     model = genai.GenerativeModel("gemini-1.5-flash")
@@ -215,7 +208,7 @@ def main():
                     st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
                 except: st.warning("AI cooling down.")
 
-    elif nav == "🛡️ RISK MANAGEMENT":
+    elif nav == " RISK MANAGEMENT":
         st.markdown('<div class="section-header">STRATEGIC RISK-RETURN QUADRANT</div>', unsafe_allow_html=True)
         
         m_r, m_p = df['Risk_Score'].median(), df['PI'].median()
@@ -231,7 +224,7 @@ def main():
         k1.metric("VAR (95% CONFIDENCE)", f"{norm.ppf(0.05, mu_p, sig_p):.2%}")
         k2.metric("SHARPE RATIO AVG", f"{selected['Sharpe_Score'].mean():.2f}")
 
-        if st.button("🤖 AI Expert: Explain Risk Exposure"):
+        if st.button("Risk Exposure"):
             with st.spinner("Decoding Risk..."):
                 try:
                     model = genai.GenerativeModel("gemini-1.5-flash")
@@ -239,7 +232,7 @@ def main():
                     st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
                 except: st.warning("AI cooling down.")
 
-    elif nav == "🖋️ INSTITUTIONAL THESIS":
+    elif nav == " INSTITUTIONAL THESIS":
         st.markdown('<div class="section-header">PROJECT DEEP-DIVE THESIS</div>', unsafe_allow_html=True)
         target = st.selectbox("SELECT PROJECT FOR QUANT ANALYSIS", selected['Project_ID'])
         r = selected[selected['Project_ID'] == target].iloc[0]
@@ -256,7 +249,7 @@ def main():
 
     # PERSISTENT FOOTER
     st.markdown("---")
-    st.download_button("📥 DOWNLOAD OPTIMIZED PORTFOLIO (CSV)", selected.to_csv(index=False), file_name="STRATOS_Approved_Portfolio.csv", mime="text/csv")
+    st.download_button(" DOWNLOAD (CSV)", selected.to_csv(index=False), file_name="STRATOS_Approved_Portfolio.csv", mime="text/csv")
 
 if __name__ == "__main__":
     main()
