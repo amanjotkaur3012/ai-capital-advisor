@@ -132,23 +132,92 @@ def main():
 
     # PAGE ROUTING
     if nav == "SUMMARY":
+
+        # ============================================================
+        # 1. PORTFOLIO AGGREGATE PERFORMANCE
+        # ============================================================
+
         st.markdown('<div class="section-header">PORTFOLIO AGGREGATE PERFORMANCE</div>', unsafe_allow_html=True)
+
+        total_capital = selected['Investment_Capital'].sum()
+        total_value = selected['Strategic_Value'].sum()
+        avg_esg = selected['ESG_Score'].mean()
+        avg_pi = selected['PI'].mean()
+
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("CAPITAL DEPLOYED", f"${selected['Investment_Capital'].sum():,.0f}")
-        c2.metric("STRATEGIC VALUE", f"${selected['Strategic_Value'].sum():,.0f}")
-        c3.metric("ESG IMPACT", f"{selected['ESG_Score'].mean():.1f}/10")
-        c4.metric("VALUE INDEX (PI)", f"{selected['PI'].mean():.2f}x")
-        
+        c1.metric("CAPITAL DEPLOYED", f"${total_capital:,.0f}")
+        c2.metric("STRATEGIC VALUE", f"${total_value:,.0f}")
+        c3.metric("ESG IMPACT", f"{avg_esg:.1f}/10")
+        c4.metric("VALUE INDEX (PI)", f"{avg_pi:.2f}x")
+
+        # ============================================================
+        # 2. PORTFOLIO SIGNALS (RELATIVE CONTEXT)
+        # ============================================================
+
+        efficiency = total_value / total_capital
+        esg_spread = avg_esg - df['ESG_Score'].mean()
+
+        st.markdown(
+            f"""
+            **Portfolio Signals**
+            - Capital efficiency (Value / Capital): {efficiency:.2f}x
+            - ESG premium vs universe: {esg_spread:+.2f}
+            """,
+            unsafe_allow_html=True
+        )
+
+        # ============================================================
+        # 3. FUNDING SCHEDULE (DECISION-ORDERED)
+        # ============================================================
+
         st.markdown('<div class="section-header">FUNDING SCHEDULE</div>', unsafe_allow_html=True)
-        st.dataframe(selected[['Project_ID', 'Department', 'Investment_Capital', 'Pred_ROI', 'PI', 'ESG_Score']].style.background_gradient(cmap='Greens'), use_container_width=True)
-        
+
+        display_df = selected.sort_values(
+            ["PI", "Pred_ROI"], ascending=False
+        )
+
+        st.dataframe(
+            display_df[
+                ['Project_ID', 'Department', 'Investment_Capital', 'Pred_ROI', 'PI', 'ESG_Score']
+            ].style.background_gradient(cmap='Greens'),
+            use_container_width=True
+        )
+
+        # ============================================================
+        # 4. CAPITAL CONCENTRATION CHECK
+        # ============================================================
+
+        top3_share = display_df.head(3)['Investment_Capital'].sum() / total_capital
+
+        if top3_share > 0.55:
+            st.warning(
+                f"Capital concentration risk detected: top 3 projects absorb {top3_share:.0%} of deployed capital."
+            )
+
+        # ============================================================
+        # 5. AI INTERPRETATION (PRESERVED, IMPROVED PROMPT)
+        # ============================================================
+
         if st.button("Interpret Summary"):
-            with st.spinner("AI analyzing balance..."):
+            with st.spinner("AI analyzing portfolio..."):
                 try:
                     model = genai.GenerativeModel("gemini-1.5-flash")
-                    res = model.generate_content(f"Explain this portfolio summary to a CEO: Budget ${selected['Investment_Capital'].sum()}, Value ${selected['Strategic_Value'].sum()}, ESG {selected['ESG_Score'].mean():.1f}. Focus on wealth creation.")
+                    res = model.generate_content(
+                        f"""
+                        Provide an executive summary of portfolio performance:
+
+                        - Capital deployed: {total_capital:,.0f}
+                        - Strategic value created: {total_value:,.0f}
+                        - Portfolio efficiency: {efficiency:.2f}x
+                        - Average ESG score: {avg_esg:.2f}
+                        - Capital concentration (top 3): {top3_share:.0%}
+
+                        Focus on value creation quality, capital discipline, and governance considerations.
+                        """
+                    )
                     st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
-                except: st.warning("AI cooling down.")
+                except:
+                    st.warning("AI temporarily unavailable. Please retry.")
 
     elif nav == " ML INTELLIGENCE":
         # All code below this must be indented by one level (4 spaces)
