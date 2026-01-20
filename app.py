@@ -270,25 +270,28 @@ def main():
                 response = model.generate_content(q_prompt)
                 st.info(response.text)
 
-    with t5:
-        st.subheader("Institutional AI Thesis")
+   with t5:
+        st.subheader("Deep-Dive AI Investment Thesis")
         target = st.selectbox("Select Project for AI Deep Dive", selected['Project_ID'])
         r = selected[selected['Project_ID'] == target].iloc[0]
         
-        if st.button("Consult AI Analyst"):
-            with st.spinner("Accessing LLM Logic..."):
+        if st.button("🖋️ Generate Expert Memo"):
+            with st.spinner("Accessing Institutional Intelligence..."):
                 try:
                     m_list = genai.list_models()
                     available = [m.name for m in m_list if 'generateContent' in m.supported_generation_methods]
                     m_name = "gemini-1.5-flash" if f"models/gemini-1.5-flash" in available else available[0].replace("models/", "")
+                    
                     model = genai.GenerativeModel(m_name)
-                    prompt = f"Analyze project {target}. PI {r['PI']:.2f}, ESG {r['ESG_Score']}, Sharpe {r['Sharpe_Score']:.2f}. Discuss trade-offs."
+                    prompt = f"Senior Quant perspective: Analyze {target}. PI {r['PI']:.2f}, ESG {r['ESG_Score']}, Sharpe {r['Sharpe_Score']:.2f}. Discuss trade-offs."
                     response = model.generate_content(prompt)
                     st.success(f"Analyst: {m_name.upper()}")
-                    st.write(response.text)
+                    st.markdown(response.text)
                 except Exception as e:
-                    if "429" in str(e): st.error("Rate Limit (429) reached. Wait 60s.")
-                    else: st.error(f"Error: {e}")
+                    if "429" in str(e):
+                        st.warning("⏳ **AI Analyst is cooling down.** We have reached the free-tier limit (5 requests/min). Please wait 60 seconds before generating the next memo.")
+                    else:
+                        st.error(f"Connection Error: {e}")
 
     st.markdown("---")
     st.markdown("### 📥 Export for Investment Committee")
