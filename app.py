@@ -195,7 +195,7 @@ def main():
 
             top_driver = feat_imp.iloc[-1]['Feature']
             st.caption(
-                f"📌 **Model Insight:** ROI predictions are primarily driven by **{top_driver}**. "
+                f" **Model Insight:** ROI predictions are primarily driven by **{top_driver}**. "
                 f"Capital efficiency is more sensitive to this factor than others."
             )
 
@@ -238,7 +238,7 @@ def main():
             st.plotly_chart(fig_eff, use_container_width=True)
 
             st.caption(
-                "🧭 **Interpretation:** Top-right quadrant = projects creating strong value while meeting ESG goals."
+                " **Interpretation:** Top-right quadrant = projects creating strong value while meeting ESG goals."
             )
 
         # ============================================================
@@ -261,34 +261,232 @@ def main():
 
 
     elif nav == " SENSITIVITY":
+        # ============================================================
+        # 1. VALUE SENSITIVITY: BUDGET vs ESG
+        # ============================================================
+
         st.markdown('<div class="section-header">VALUE SENSITIVITY: BUDGET VS SUSTAINABILITY</div>', unsafe_allow_html=True)
+
         b_range = np.linspace(budget * 0.8, budget * 1.2, 5)
         e_range = np.linspace(4, 9, 5)
         h_map = []
+
         for b in b_range:
             row = []
             for e in e_range:
                 temp = run_optimization(df.copy(), b, e)
                 row.append(temp[temp['Selected'] == 1]['Strategic_Value'].sum())
             h_map.append(row)
-        
-        st.plotly_chart(px.imshow(h_map, x=[f"ESG {e:.1f}" for e in e_range], y=[f"${b/1e6:.1f}M" for b in b_range], color_continuous_scale='RdYlGn'), use_container_width=True)
-        
+
+        h_df = pd.DataFrame(
+            h_map,
+            index=[f"${b/1e6:.1f}M" for b in b_range],
+            columns=[f"ESG {e:.1f}" for e in e_range]
+        )
+
+        fig_hm = px.imshow(
+            h_df,
+            text_auto=".1f",
+            aspect="auto",
+            title="Where Portfolio Value Scales or Breaks",
+            color_continuous_scale="RdYlGn"
+        )
+
+        max_val = h_df.values.max()
+        opt_idx = np.unravel_index(np.argmax(h_df.values), h_df.shape)
+        opt_budget = h_df.index[opt_idx[0]]
+        opt_esg = h_df.columns[opt_idx[1]]
+
+        fig_hm.add_annotation(
+            x=opt_esg,
+            y=opt_budget,
+            text="MAX VALUE ZONE",
+            showarrow=True,
+            arrowhead=2,
+            font=dict(color="white")
+        )
+
+        fig_hm.update_layout(
+            xaxis_title="ESG Constraint Tightness",
+            yaxis_title="Capital Budget Level",
+            title_font_size=18
+        )
+
+        st.plotly_chart(fig_hm, use_container_width=True)
+
+        st.caption(
+            f" **Decision Signal:** Optimal value occurs near **{opt_budget} / {opt_esg}**. "
+            "Beyond this ESG level, value erosion accelerates."
+        )
+
+        # ============================================================
+        # 2. VALUE CLIFF DETECTION
+        # ============================================================
+
+        value_drop = np.diff(h_df.values, axis=1).mean()
+
+        if value_drop < -0.15 * max_val:
+            st.warning(
+                " **Value Cliff Detected:** Increasing ESG strictness causes rapid value loss. "
+                "Board-level trade-off discussion recommended."
+            )
+        else:
+            st.success(" ESG tightening shows controlled value impact.")
+
+        # ============================================================
+        # 3. 3-YEAR CASH OUTLAY SCHEDULE
+        # ============================================================
+
         st.markdown('<div class="section-header">3-YEAR CASH OUTLAY SCHEDULE</div>', unsafe_allow_html=True)
+
         selected['Y1'] = selected['Investment_Capital'] * selected['Phase_1_Cap']
         selected['Y2'] = selected['Investment_Capital'] * selected['Phase_2_Cap']
         selected['Y3'] = selected['Investment_Capital'] - (selected['Y1'] + selected['Y2'])
+
         ph_sum = selected[['Y1', 'Y2', 'Y3']].sum().reset_index()
         ph_sum.columns = ['Year', 'Outlay']
-        st.plotly_chart(px.area(ph_sum, x='Year', y='Outlay', color_discrete_sequence=['#1f6feb']), use_container_width=True)
+
+        peak_year = ph_sum.loc[ph_sum["Outlay"].idxmax(), "Year"]
+        peak_val = ph_sum["Outlay"].max()
+
+        fig_cash = px.area(
+            ph_sum,
+            x='Year',
+            y='Outlay',
+            title="Capital Burn Profile (Liquidity Stress Test)",
+            text=ph_sum["Outlay"].round(0)
+        )
+
+        fig_cash.add_hline(
+            y=ph_sum["Outlay"].mean(),
+            line_dash="dot",
+            annotation_text="Average Burn"
+        )
+
+        fig_cash.add_annotation(
+            x=peak_year,
+            y=peak_val,
+            text="Peak Liquidity Pressure",
+            showarrow=True,
+            arrowhead=2
+        )
+
+        fig_cash.update_layout(
+            xaxis_title="Investment Year",
+            yaxis_title="Capital Outlay ($)",
+            title_font_size=18
+        )
+
+        st.plotly_chart(fig_cash, use_container_width=True)
+
+        st.caption(
+            f" **Liquidity Insight:** Year **{peak_year}** requires the highest cash commitment. "
+            "Ensure financing lines or reserves are aligned to this peak."
+        )
+
+        # ============================================================
+        # 4. LIQUIDITY STRESS TEST
+        # ============================================================
+
+        avg_outlay = ph_sum["Outlay"].mean()
+        max_outlay = ph_sum["Outlay"].max()
+        stress_ratio = max_outlay / avg_outlay
+
+        if stress_ratio > 1.25:
+            st.error(
+                " **Liquidity Stress Alert:** Peak capital demand exceeds average burn by >25%. "
+                "Staged deployment or external financing recommended."
+            )
+        elif stress_ratio > 1.1:
+            st.warning(
+                " **Moderate Liquidity Pressure:** Capital peaks are manageable but require planning."
+            )
+        else:
+            st.success(
+                " **Stable Capital Profile:** No abnormal liquidity stress detected."
+            )
+
+        # ============================================================
+        # 5. SCENARIO NARRATIVES
+        # ============================================================
+
+        st.markdown('<div class="section-header">SCENARIO NARRATIVES</div>', unsafe_allow_html=True)
+
+        scenarios = {
+            "Growth First": h_df.iloc[:, 0].mean(),
+            "Balanced Strategy": h_df.iloc[:, 2].mean(),
+            "ESG Strict": h_df.iloc[:, -1].mean()
+        }
+
+        sc_df = pd.DataFrame.from_dict(
+            scenarios, orient="index", columns=["Portfolio Value"]
+        ).reset_index()
+
+        fig_sc = px.bar(
+            sc_df,
+            x="index",
+            y="Portfolio Value",
+            text="Portfolio Value",
+            title="Strategy Outcomes Under Board Mandates"
+        )
+
+        fig_sc.update_layout(
+            xaxis_title="Strategy Type",
+            yaxis_title="Total Strategic Value ($)",
+            title_font_size=18
+        )
+
+        st.plotly_chart(fig_sc, use_container_width=True)
+
+        best_scenario = sc_df.sort_values("Portfolio Value", ascending=False).iloc[0]["index"]
+
+        st.caption(
+            f" **Board Insight:** The **{best_scenario}** mandate maximizes portfolio value under current conditions."
+        )
+
+        # ============================================================
+        # 6. EXECUTIVE RECOMMENDATION
+        # ============================================================
+
+        st.markdown('<div class="section-header">EXECUTIVE SIGNAL</div>', unsafe_allow_html=True)
+
+        if best_scenario == "Balanced Strategy" and stress_ratio < 1.2:
+            rec = "PROCEED"
+            color = "green"
+        elif best_scenario == "Growth First" and stress_ratio < 1.15:
+            rec = "PROCEED WITH CAUTION"
+            color = "orange"
+        else:
+            rec = "RESTRUCTURE"
+            color = "red"
+
+        st.markdown(
+            f"<h2 style='color:{color}; font-weight:800;'>Recommendation: {rec}</h2>",
+            unsafe_allow_html=True
+        )
+
+        # ============================================================
+        # 7. AI INTERPRETATION
+        # ============================================================
 
         if st.button("Interpret Sensitivity"):
             with st.spinner("Analyzing trade-offs..."):
                 try:
                     model = genai.GenerativeModel("gemini-1.5-flash")
-                    res = model.generate_content(f"Explain the sensitivity heatmap. Budget is ${budget} and ESG hurdle is {esg_min}. How does changing these impact the ${selected['Strategic_Value'].sum()} total value?")
+                    res = model.generate_content(
+                        f"""
+                        Explain this sensitivity analysis to a CFO:
+                        - Optimal budget/ESG zone: {opt_budget} / {opt_esg}
+                        - Best scenario: {best_scenario}
+                        - Liquidity stress ratio: {stress_ratio:.2f}
+                        - Executive recommendation: {rec}
+
+                        Focus on capital safety, flexibility, and strategic trade-offs.
+                        """
+                    )
                     st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
-                except: st.warning("AI cooling down.")
+                except:
+                    st.warning("AI cooling down.")
 
     elif nav == " RISK MANAGEMENT":
         st.markdown('<div class="section-header">STRATEGIC RISK-RETURN QUADRANT</div>', unsafe_allow_html=True)
