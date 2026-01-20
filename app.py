@@ -151,112 +151,113 @@ def main():
                 except: st.warning("AI cooling down.")
 
     elif nav == " ML INTELLIGENCE":
+        # All code below this must be indented by one level (4 spaces)
+        st.markdown('<div class="section-header">PREDICTIVE ROI LOGIC</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="section-header">PREDICTIVE ROI LOGIC</div>', unsafe_allow_html=True)
+        # ============================================================
+        # 1. FEATURE IMPORTANCE — INTERPRETABLE
+        # ============================================================
+        col_l, col_r = st.columns(2)
 
-    # ============================================================
-    # 1. FEATURE IMPORTANCE — INTERPRETABLE
-    # ============================================================
+        with col_l:
+            st.write("**WHAT DRIVES ROI (MODEL INTERPRETATION)**")
 
-    col_l, col_r = st.columns(2)
+            feat_imp = pd.DataFrame({
+                'Feature': feats,
+                'Importance': rf_model.feature_importances_
+            }).sort_values("Importance", ascending=True)
 
-    with col_l:
-        st.write("**WHAT DRIVES ROI (MODEL INTERPRETATION)**")
+            feat_imp['Contribution_%'] = (feat_imp['Importance'] / feat_imp['Importance'].sum()) * 100
 
-        feat_imp = pd.DataFrame({
-            'Feature': feats,
-            'Importance': rf_model.feature_importances_
-        }).sort_values("Importance", ascending=True)
+            fig_imp = px.bar(
+                feat_imp,
+                x="Contribution_%",
+                y="Feature",
+                orientation="h",
+                text=feat_imp["Contribution_%"].round(1).astype(str) + "%",
+                title="Relative Contribution to ROI Prediction",
+            )
 
-        feat_imp['Contribution_%'] = (feat_imp['Importance'] / feat_imp['Importance'].sum()) * 100
+            fig_imp.add_vline(
+                x=feat_imp["Contribution_%"].mean(),
+                line_dash="dash",
+                annotation_text="Average Influence",
+                opacity=0.4
+            )
 
-        fig_imp = px.bar(
-            feat_imp,
-            x="Contribution_%",
-            y="Feature",
-            orientation="h",
-            text=feat_imp["Contribution_%"].round(1).astype(str) + "%",
-            title="Relative Contribution to ROI Prediction",
+            fig_imp.update_layout(
+                xaxis_title="Contribution to ROI Prediction (%)",
+                yaxis_title="",
+                title_font_size=16
+            )
+
+            st.plotly_chart(fig_imp, use_container_width=True)
+
+            top_driver = feat_imp.iloc[-1]['Feature']
+            st.caption(
+                f"📌 **Model Insight:** ROI predictions are primarily driven by **{top_driver}**. "
+                f"Capital efficiency is more sensitive to this factor than others."
+            )
+
+        # ============================================================
+        # 2. EFFICIENCY FRONTIER — DECISION MAP
+        # ============================================================
+        with col_r:
+            st.write("**VALUE vs ESG DECISION MAP**")
+
+            median_esg = df["ESG_Score"].median()
+            median_val = df["Strategic_Value"].median()
+
+            fig_eff = px.scatter(
+                df,
+                x="ESG_Score",
+                y="Strategic_Value",
+                size="Investment_Capital",
+                color="Selected",
+                hover_data=["Project_ID", "Pred_ROI", "PI"],
+                title="Value–Sustainability Trade-off",
+                color_discrete_map={1: '#58a6ff', 0: '#30363d'}
+            )
+
+            fig_eff.add_hline(
+                y=median_val, line_dash="dot",
+                annotation_text="High Value Zone"
+            )
+
+            fig_eff.add_vline(
+                x=median_esg, line_dash="dot",
+                annotation_text="High ESG Zone"
+            )
+
+            fig_eff.update_layout(
+                xaxis_title="ESG Quality (Higher = Better)",
+                yaxis_title="Strategic Value ($)",
+                title_font_size=16
+            )
+
+            st.plotly_chart(fig_eff, use_container_width=True)
+
+            st.caption(
+                "🧭 **Interpretation:** Top-right quadrant = projects creating strong value while meeting ESG goals."
+            )
+
+        # ============================================================
+        # 3. ESG RADAR — BALANCE DIAGNOSTIC (Fixed & Completed)
+        # ============================================================
+        st.markdown('<div class="section-header">ESG BALANCE DIAGNOSTIC</div>', unsafe_allow_html=True)
+
+        p_means = selected[['E_Score', 'S_Score', 'G_Score']].mean().reset_index()
+        p_means.columns = ['Pillar', 'Score']
+
+        fig_radar = px.line_polar(
+            p_means, 
+            r='Score', 
+            theta='Pillar', 
+            line_close=True,
+            title="Portfolio ESG Pillar Distribution"
         )
-
-        fig_imp.add_vline(
-            x=feat_imp["Contribution_%"].mean(),
-            line_dash="dash",
-            annotation_text="Average Influence",
-            opacity=0.4
-        )
-
-        fig_imp.update_layout(
-            xaxis_title="Contribution to ROI Prediction (%)",
-            yaxis_title="",
-            title_font_size=16
-        )
-
-        st.plotly_chart(fig_imp, use_container_width=True)
-
-        top_driver = feat_imp.iloc[-1]['Feature']
-        st.caption(
-            f"📌 **Model Insight:** ROI predictions are primarily driven by **{top_driver}**. "
-            f"Capital efficiency is more sensitive to this factor than others."
-        )
-
-    # ============================================================
-    # 2. EFFICIENCY FRONTIER — DECISION MAP
-    # ============================================================
-
-    with col_r:
-        st.write("**VALUE vs ESG DECISION MAP**")
-
-        median_esg = df["ESG_Score"].median()
-        median_val = df["Strategic_Value"].median()
-
-        fig_eff = px.scatter(
-            df,
-            x="ESG_Score",
-            y="Strategic_Value",
-            size="Investment_Capital",
-            color="Selected",
-            hover_data=["Project_ID", "Pred_ROI", "PI"],
-            title="Value–Sustainability Trade-off",
-            color_discrete_map={1:'#58a6ff', 0:'#30363d'}
-        )
-
-        fig_eff.add_hline(
-            y=median_val, line_dash="dot",
-            annotation_text="High Value Zone"
-        )
-
-        fig_eff.add_vline(
-            x=median_esg, line_dash="dot",
-            annotation_text="High ESG Zone"
-        )
-
-        fig_eff.update_layout(
-            xaxis_title="ESG Quality (Higher = Better)",
-            yaxis_title="Strategic Value ($)",
-            title_font_size=16
-        )
-
-        st.plotly_chart(fig_eff, use_container_width=True)
-
-        st.caption(
-            "🧭 **Interpretation:** Top-right quadrant = projects creating strong value while meeting ESG goals. "
-            "Bottom-left quadrant = candidates for rejection or redesign."
-        )
-
-    # ============================================================
-    # 3. ESG RADAR — BALANCE DIAGNOSTIC
-    # ============================================================
-
-    st.markdown('<div class="section-header">ESG BALANCE DIAGNOSTIC</div>', unsafe_allow_html=True)
-
-    p_means = selected[['E_Score', 'S_Score', 'G_Score']].mean().reset_index()
-    p_means.columns = ['Pillar', 'Score']
-
-    avg_esg = p_means["Score"].mean()
-    imbalance = p_means["Score"].max() - p_means["Score"].min()
-
-    fig_radar = px.line_polar(
+        fig_radar.update_traces(fill='toself', line_color='#10b981')
+        st.plotly_chart(fig_radar, use_container_width=True)
 
 
     elif nav == " SENSITIVITY":
