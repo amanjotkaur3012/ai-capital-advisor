@@ -20,7 +20,7 @@ import io
 # ----------------------------------------------------
 # Your provided API Key is hardcoded here to ensure background operation.
 GEMINI_API_KEY = 
-if GEMINI_API_KEY:
+if GEMINI_API_KEY: "AIzaSyDAz2r4IRQT5dv3zNq-uuRO7D2O86nNueE"
     genai.configure(api_key=GEMINI_API_KEY)
 
 st.set_page_config(page_title="STRATOS QUANT | MSc Finance Advisor", layout="wide")
