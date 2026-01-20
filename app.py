@@ -488,7 +488,8 @@ def main():
                 except:
                     st.warning("AI cooling down.")
 
-elif nav == " RISK MANAGEMENT":
+    elif nav == " RISK MANAGEMENT":
+
         # ============================================================
         # 1. STRATEGIC RISK–RETURN QUADRANT
         # ============================================================
@@ -629,6 +630,7 @@ elif nav == " RISK MANAGEMENT":
                 except:
                     st.warning("AI temporarily unavailable. Please retry.")
 
+    
     elif nav == " INSTITUTIONAL THESIS":
         st.markdown('<div class="section-header">PROJECT DEEP-DIVE THESIS</div>', unsafe_allow_html=True)
         target = st.selectbox("SELECT PROJECT FOR QUANT ANALYSIS", selected['Project_ID'])
