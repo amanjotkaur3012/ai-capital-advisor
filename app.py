@@ -43,8 +43,8 @@ st.markdown("""
         background: #161b22; border: 2px solid #30363d; border-radius: 12px; padding: 30px;
         box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
-    div[data-testid="stMetricValue"] { font-size: 42px !important; color: #ffffff !important; font-weight: 800; }
-    div[data-testid="stMetricLabel"] { font-size: 18px !important; color: #58a6ff !important; text-transform: uppercase; font-weight: 600; }
+    div[data-testid="stMetricValue"] { font-size: 34px !important; color: #ffffff !important; font-weight: 700; }
+    div[data-testid="stMetricLabel"] { font-size: 15px !important; color: #58a6ff !important; text-transform: uppercase; font-weight: 600; }
     .ai-insight-box {
         background: rgba(88, 166, 255, 0.15); border: 1px solid #58a6ff;
         padding: 25px; border-radius: 10px; color: #f0f6fc; margin: 20px 0;
@@ -144,14 +144,20 @@ def main():
         avg_esg = selected['ESG_Score'].mean()
         avg_pi = selected['PI'].mean()
 
+        def fmt_money(x):
+            if x >= 1e9: return f"${x/1e9:.2f}B"
+            if x >= 1e6: return f"${x/1e6:.2f}M"
+            if x >= 1e3: return f"${x/1e3:.1f}K"
+            return f"${x:.0f}"
+
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("CAPITAL DEPLOYED", f"${total_capital:,.0f}")
-        c2.metric("STRATEGIC VALUE", f"${total_value:,.0f}")
+        c1.metric("CAPITAL DEPLOYED", fmt_money(total_capital))
+        c2.metric("STRATEGIC VALUE", fmt_money(total_value))
         c3.metric("ESG IMPACT", f"{avg_esg:.1f}/10")
         c4.metric("VALUE INDEX (PI)", f"{avg_pi:.2f}x")
 
         # ============================================================
-        # 2. PORTFOLIO SIGNALS (RELATIVE CONTEXT)
+        # 2. PORTFOLIO SIGNALS
         # ============================================================
 
         efficiency = total_value / total_capital
@@ -195,7 +201,7 @@ def main():
             )
 
         # ============================================================
-        # 5. AI INTERPRETATION (PRESERVED, IMPROVED PROMPT)
+        # 5. AI INTERPRETATION
         # ============================================================
 
         if st.button("Interpret Summary"):
