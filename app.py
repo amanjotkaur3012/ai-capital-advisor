@@ -113,15 +113,21 @@ def main():
     selected = df[df['Selected'] == 1]
 
     # --- DASHBOARD TABS ---
-    t1, t2, t3, t4, t5 = st.tabs(["🚀 Summary", "🧠 ML Analytics", "📊 Sensitivity", "🛡️ Risk Quadrant", "🤖 AI Thesis"])
+    t1, t2, t3, t4, t5 = st.tabs([" Summary", " ML Analytics", " Sensitivity", " Risk Quadrant", " AI Thesis"])
     
     with t1:
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Capital Allocated", f"${selected['Investment_Capital'].sum():,.0f}", f"{selected['Investment_Capital'].sum()/budget*100:.1f}%")
-        c2.metric("Portfolio Strategic NPV", f"${selected['Strategic_Value'].sum():,.0f}")
+        c1.metric("Capital Allocated", f"${selected['Investment_Capital'].sum():,.0f}")
+        c2.metric("Portfolio NPV", f"${selected['Strategic_Value'].sum():,.0f}")
         c3.metric("Avg ESG Impact", f"{selected['ESG_Score'].mean():.1f}")
         c4.metric("Agg. PI", f"{selected['PI'].mean():.2f}x")
-        st.dataframe(selected[['Project_ID', 'Department', 'Investment_Capital', 'Pred_ROI', 'PI', 'ESG_Score']].style.background_gradient(cmap='Blues'))
+        
+        st.write("### Final Investment Schedule")
+        # Fallback for Matplotlib if background_gradient fails
+        try:
+            st.dataframe(selected[['Project_ID', 'Department', 'Investment_Capital', 'Pred_ROI', 'PI', 'ESG_Score']].style.background_gradient(cmap='Greens'))
+        except:
+            st.dataframe(selected[['Project_ID', 'Department', 'Investment_Capital', 'Pred_ROI', 'PI', 'ESG_Score']])
 
     with t2:
         col_a, col_b = st.columns(2)
@@ -134,7 +140,8 @@ def main():
             st.plotly_chart(px.scatter(df, x="ESG_Score", y="Strategic_Value", color="Selected", size="Investment_Capital"), use_container_width=True)
 
     with t3:
-        st.subheader("Sensitivity Matrix: Budget vs ESG")
+        st.subheader("Sensitivity Matrix: Strategic Value vs ESG Hurdle")
+        # We model how much Total NPV is "sacrificed" to meet ESG targets
         b_range = np.linspace(budget * 0.8, budget * 1.2, 5)
         e_range = np.linspace(4, 9, 5)
         h_map = []
@@ -145,57 +152,62 @@ def main():
                 row.append(temp[temp['Selected'] == 1]['Strategic_Value'].sum())
             h_map.append(row)
         
-        fig_heat = px.imshow(h_map, x=[f"ESG {e:.1f}" for e in e_range], y=[f"${b/1e6:.1f}M" for b in b_range], color_continuous_scale='RdYlGn')
+        fig_heat = px.imshow(
+            h_map, 
+            x=[f"ESG {e:.1f}" for e in e_range], 
+            y=[f"${b/1e6:.1f}M" for b in b_range], 
+            color_continuous_scale='RdYlGn',
+            labels=dict(x="Sustainability Hurdle", y="Budget Capacity", color="Total NPV ($)")
+        )
         st.plotly_chart(fig_heat, use_container_width=True)
+        st.info("💡 Strategic Insight: The top-right (Dark Red) shows 'Capital Rationing'—where high ESG requirements combined with low budgets severely limit total portfolio value.")
 
-   with t4:
-        st.subheader("Strategic Risk-Return Analysis")
+    with t4:
+        st.subheader("Strategic Risk-Return Quadrant")
         
-        # Define the 4 decision zones
-        median_risk = df['Risk_Score'].median()
-        median_pi = df['PI'].median()
+        # Calculate Medians for clean quadrant splits
+        m_risk = df['Risk_Score'].median()
+        m_pi = df['PI'].median()
         
         fig_quad = px.scatter(
             df, x="Risk_Score", y="PI", color="Selected", size="Investment_Capital",
             hover_name="Project_ID", text="Project_ID",
-            color_discrete_map={1: '#00e676', 0: '#455a64'},
+            color_discrete_map={1: '#10b981', 0: '#455a64'},
             labels={"PI": "Profitability Index (Value)", "Risk_Score": "Risk Rating (1-10)"}
         )
-
-        # Cleanup: Move labels to avoid bubble overlap
+        
+        # UI Polish: Move labels to avoid clutter
         fig_quad.update_traces(textposition='top center')
 
-        # Strategic Overlays (Shading)
-        fig_quad.add_hrect(y0=median_pi, y1=df['PI'].max()*1.1, x0=0, x1=median_risk, 
+        # Strategic Overlays: Add Background Shading for Quadrants
+        fig_quad.add_hrect(y0=m_pi, y1=df['PI'].max()*1.1, x0=0, x1=m_risk, 
                           fillcolor="green", opacity=0.08, layer="below", line_width=0,
                           annotation_text="STRATEGIC CORE")
         
-        fig_quad.add_hrect(y0=0, y1=median_pi, x0=median_risk, x1=10, 
+        fig_quad.add_hrect(y0=0, y1=m_pi, x0=m_risk, x1=10, 
                           fillcolor="red", opacity=0.08, layer="below", line_width=0,
                           annotation_text="VALUE TRAPS")
-
+        
         st.plotly_chart(fig_quad, use_container_width=True)
+        st.markdown("> **Legend:** Top-Left = High Efficiency (Funded) | Bottom-Right = High Risk/Low Return (Rejected)")
 
     with t5:
         st.subheader("AI Dealer Memo")
-        target = st.selectbox("Select Project", selected['Project_ID'])
+        target = st.selectbox("Select Project for Deep Dive", selected['Project_ID'])
         r = selected[selected['Project_ID'] == target].iloc[0]
         
-        if st.button("Generate Memo"):
-            with st.spinner("Accessing Gemini..."):
+        if st.button("Generate Institutional Memo"):
+            with st.spinner("Analyzing fundamentals..."):
                 try:
-                    # DYNAMIC DISCOVERY: Fixes the 'NotFound' error by checking authorized models
+                    # Robust model discovery
                     model_list = genai.list_models()
                     available = [m.name for m in model_list if 'generateContent' in m.supported_generation_methods]
-                    model_name = "gemini-1.5-flash" if f"models/gemini-1.5-flash" in available else available[0].replace("models/", "")
+                    m_name = "gemini-1.5-flash" if f"models/gemini-1.5-flash" in available else available[0].replace("models/", "")
                     
-                    llm = genai.GenerativeModel(model_name)
-                    prompt = f"Role: Senior Quant. Project {target}. PI {r['PI']:.2f}, ESG {r['ESG_Score']}. Write a 3-sentence investment thesis."
+                    llm = genai.GenerativeModel(m_name)
+                    prompt = f"Role: Senior Quant. Analyze project {target}. PI {r['PI']:.2f}, ESG {r['ESG_Score']}. Discuss the trade-off between its {r['Risk_Score']} risk and the current {rf_rate}% risk-free rate."
                     res = llm.generate_content(prompt)
-                    st.success(f"Analyst: {model_name.upper()}")
+                    st.success(f"Analyst: {m_name.upper()}")
                     st.write(res.text)
                 except Exception as e:
-                    st.error(f"AI Connectivity Error: {e}")
-
-if __name__ == "__main__":
-    main()
+                    st.error(f"AI Error: {e}")
