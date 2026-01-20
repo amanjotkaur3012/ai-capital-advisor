@@ -155,16 +155,109 @@ def main():
         col_l, col_r = st.columns(2)
         with col_l:
             st.write("**DRIVERS OF VALUE (FEATURE IMPORTANCE)**")
-            feat_imp = pd.DataFrame({'Feature': feats, 'Importance': rf_model.feature_importances_})
-            st.plotly_chart(px.bar(feat_imp, x='Importance', y='Feature', orientation='h', color_continuous_scale='Blues'), use_container_width=True)
+            feat_imp = pd.DataFrame({
+    'Feature': feats,
+    'Importance': rf_model.feature_importances_
+}).sort_values("Importance", ascending=True)
+
+feat_imp['Contribution_%'] = (feat_imp['Importance'] / feat_imp['Importance'].sum()) * 100
+
+fig_imp = px.bar(
+    feat_imp,
+    x="Contribution_%",
+    y="Feature",
+    orientation="h",
+    text=feat_imp["Contribution_%"].round(1).astype(str) + "%",
+    title="What Actually Drives ROI Prediction",
+)
+
+fig_imp.add_vline(
+    x=feat_imp["Contribution_%"].mean(),
+    line_dash="dash",
+    annotation_text="Average Influence",
+    opacity=0.4
+)
+
+fig_imp.update_layout(
+    xaxis_title="Contribution to ROI Prediction (%)",
+    yaxis_title="",
+    title_font_size=18
+)
+
+st.plotly_chart(fig_imp, use_container_width=True)
+
+# 🔍 Auto-interpretation
+top_driver = feat_imp.iloc[-1]['Feature']
+st.caption(f"📌 **Model Insight:** ROI is primarily driven by **{top_driver}**, meaning capital decisions are more sensitive to this factor than cost or ESG alone.")
+
         with col_r:
             st.write("**EFFICIENCY FRONTIER**")
-            st.plotly_chart(px.scatter(df, x="ESG_Score", y="Strategic_Value", size="Investment_Capital", color="Selected", color_discrete_map={1:'#58a6ff', 0:'#30363d'}), use_container_width=True)
-        
+           median_esg = df["ESG_Score"].median()
+median_val = df["Strategic_Value"].median()
+
+fig_eff = px.scatter(
+    df,
+    x="ESG_Score",
+    y="Strategic_Value",
+    size="Investment_Capital",
+    color="Selected",
+    hover_data=["Project_ID", "Pred_ROI", "PI"],
+    title="Value vs Sustainability Trade-off Map",
+    color_discrete_map={1:'#58a6ff', 0:'#30363d'}
+)
+
+fig_eff.add_hline(
+    y=median_val, line_dash="dot",
+    annotation_text="High Value Zone"
+)
+fig_eff.add_vline(
+    x=median_esg, line_dash="dot",
+    annotation_text="High ESG Zone"
+)
+
+fig_eff.update_layout(
+    xaxis_title="ESG Quality (Higher = Better)",
+    yaxis_title="Strategic Value ($)",
+    title_font_size=18
+)
+
+st.plotly_chart(fig_eff, use_container_width=True)
+
+st.caption(
+    "🧭 **Interpretation:** Top-right quadrant = projects that create high value **and** meet sustainability goals. "
+    "Bottom-left = candidates for rejection or restructuring."
+)
+
         st.markdown('<div class="section-header">ESG PILLAR RADAR</div>', unsafe_allow_html=True)
         p_means = selected[['E_Score', 'S_Score', 'G_Score']].mean().reset_index()
         p_means.columns = ['Pillar', 'Score']
-        st.plotly_chart(px.line_polar(p_means, r='Score', theta='Pillar', line_close=True, range_r=[0,10], color_discrete_sequence=['#238636']), use_container_width=True)
+        avg_esg = p_means["Score"].mean()
+imbalance = p_means["Score"].max() - p_means["Score"].min()
+
+fig_radar = px.line_polar(
+    p_means,
+    r='Score',
+    theta='Pillar',
+    line_close=True,
+    range_r=[0,10],
+    title="ESG Balance Profile (Not Just Score)",
+)
+
+fig_radar.add_shape(
+    type="circle",
+    xref="paper", yref="paper",
+    x0=0.1, y0=0.1, x1=0.9, y1=0.9,
+    line=dict(dash="dot", color="gray")
+)
+
+fig_radar.update_layout(title_font_size=18)
+st.plotly_chart(fig_radar, use_container_width=True)
+
+if imbalance > 3:
+    st.warning("⚠️ ESG profile is **imbalanced** — one pillar is carrying the score. Risk of regulatory or reputational exposure.")
+else:
+    st.success("✅ ESG profile is **well-balanced**, indicating sustainable long-term positioning.")
+
         
         if st.button("Interpret ML Intelligence"):
             with st.spinner("Decoding ML..."):
