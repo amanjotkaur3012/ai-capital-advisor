@@ -154,152 +154,76 @@ def main():
                 except: st.warning("AI cooling down (60s).")
 
     elif nav == " ML INTELLIGENCE":
+        st.markdown('<div class="section-header">PREDICTIVE ROI LOGIC</div>', unsafe_allow_html=True)
+        col_l, col_r = st.columns(2)
 
-      st.markdown('<div class="section-header">PREDICTIVE ROI LOGIC</div>', unsafe_allow_html=True)
+        with col_l:
+            st.write("**DRIVERS OF VALUE (FEATURE IMPORTANCE)**")
+            feat_imp = pd.DataFrame({
+                'Feature': feats,
+                'Importance': rf_model.feature_importances_
+            }).sort_values("Importance", ascending=False)
+            feat_imp['Cumulative'] = feat_imp['Importance'].cumsum()
 
-    # =========================================================
-    # 1. FEATURE IMPORTANCE (WITH PARETO + EXECUTIVE CALLOUT)
-    # =========================================================
-    col_l, col_r = st.columns(2)
+            top_feat = feat_imp.iloc[0]
+            st.markdown(
+                f"<div class='ai-insight-box'>"
+                f"<b>{top_feat['Feature']}</b> explains "
+                f"<b>{top_feat['Importance']*100:.0f}%</b> of ROI variance. "
+                f"Strategic discipline here maximizes capital efficiency."
+                f"</div>",
+                unsafe_allow_html=True
+            )
 
-    with col_l:
-        st.write("**DRIVERS OF VALUE (FEATURE IMPORTANCE)**")
-
-        feat_imp = pd.DataFrame({
-            'Feature': feats,
-            'Importance': rf_model.feature_importances_
-        }).sort_values("Importance", ascending=False)
-
-        feat_imp['Cumulative'] = feat_imp['Importance'].cumsum()
-
-        top_feat = feat_imp.iloc[0]
-        st.markdown(
-            f"<div class='ai-insight-box'>"
-            f"<b>{top_feat['Feature']}</b> explains "
-            f"<b>{top_feat['Importance']*100:.0f}%</b> of ROI variance. "
-            f"Strategic discipline here maximizes capital efficiency."
-            f"</div>",
-            unsafe_allow_html=True
-        )
-
-        fig_imp = go.Figure()
-
-        fig_imp.add_bar(
-            x=feat_imp['Importance'],
-            y=feat_imp['Feature'],
-            orientation='h',
-            marker_color=[
-                '#238636' if i == 0 else '#30363d'
-                for i in range(len(feat_imp))
-            ]
-        )
-
-        fig_imp.add_trace(
-            go.Scatter(
+            fig_imp = go.Figure()
+            fig_imp.add_bar(
+                x=feat_imp['Importance'],
+                y=feat_imp['Feature'],
+                orientation='h',
+                marker_color=['#238636' if i == 0 else '#30363d' for i in range(len(feat_imp))]
+            )
+            fig_imp.add_trace(go.Scatter(
                 x=feat_imp['Cumulative'],
                 y=feat_imp['Feature'],
                 mode='lines+markers',
                 line=dict(color='#58a6ff', width=3),
                 xaxis="x2"
+            ))
+            fig_imp.update_layout(
+                xaxis=dict(title="Importance"),
+                xaxis2=dict(overlaying="x", side="top", range=[0, 1], title="Cumulative Impact"),
+                template="plotly_dark", height=420
             )
-        )
+            st.plotly_chart(fig_imp, use_container_width=True)
 
-        fig_imp.update_layout(
-            xaxis=dict(title="Importance"),
-            xaxis2=dict(overlaying="x", side="top", range=[0, 1], title="Cumulative Impact"),
-            template="plotly_dark",
-            height=420
-        )
+        with col_r:
+            st.write("**EFFICIENCY FRONTIER (OPTIMAL CAPITAL ZONE)**")
+            frontier_df = df.sort_values(["ESG_Score", "Strategic_Value"])
+            frontier = frontier_df.loc[frontier_df.groupby('ESG_Score')['Strategic_Value'].idxmax()].sort_values('ESG_Score')
+            avg_esg, avg_val = df['ESG_Score'].mean(), df['Strategic_Value'].mean()
 
-        st.plotly_chart(fig_imp, use_container_width=True)
+            fig = px.scatter(df, x="ESG_Score", y="Strategic_Value", size="Investment_Capital", color="Selected",
+                             opacity=0.75, color_discrete_map={1: "#58a6ff", 0: "#30363d"})
+            fig.add_trace(go.Scatter(x=frontier['ESG_Score'], y=frontier['Strategic_Value'], mode="lines+markers",
+                                     line=dict(color="#10b981", width=3), name="Efficient Frontier"))
+            fig.add_vline(x=avg_esg, line_dash="dot", line_color="#8b949e")
+            fig.add_hline(y=avg_val, line_dash="dot", line_color="#8b949e")
+            fig.update_layout(template="plotly_dark", height=420)
+            st.plotly_chart(fig, use_container_width=True)
 
-    # =========================================================
-    # 2. EFFICIENCY FRONTIER
-    # =========================================================
-    with col_r:
-        st.write("**EFFICIENCY FRONTIER (OPTIMAL CAPITAL ZONE)**")
+        st.markdown('<div class="section-header">ESG PILLAR RADAR</div>', unsafe_allow_html=True)
+        p_means = selected[['E_Score', 'S_Score', 'G_Score']].mean().reset_index()
+        p_means.columns = ['Pillar', 'Score']
+        p_means = pd.concat([p_means, p_means.iloc[[0]]])
+        benchmark = df[['E_Score', 'S_Score', 'G_Score']].mean().tolist()
+        benchmark.append(benchmark[0])
 
-        frontier_df = df.sort_values(["ESG_Score", "Strategic_Value"])
-        frontier = frontier_df.loc[
-            frontier_df.groupby('ESG_Score')['Strategic_Value'].idxmax()
-        ].sort_values('ESG_Score')
-
-        avg_esg = df['ESG_Score'].mean()
-        avg_val = df['Strategic_Value'].mean()
-
-        fig = px.scatter(
-            df,
-            x="ESG_Score",
-            y="Strategic_Value",
-            size="Investment_Capital",
-            color="Selected",
-            opacity=0.75,
-            color_discrete_map={1: "#58a6ff", 0: "#30363d"}
-        )
-
-        fig.add_trace(
-            go.Scatter(
-                x=frontier['ESG_Score'],
-                y=frontier['Strategic_Value'],
-                mode="lines+markers",
-                line=dict(color="#10b981", width=3),
-                name="Efficient Frontier"
-            )
-        )
-
-        fig.add_vline(x=avg_esg, line_dash="dot", line_color="#8b949e")
-        fig.add_hline(y=avg_val, line_dash="dot", line_color="#8b949e")
-
-        fig.update_layout(
-            template="plotly_dark",
-            height=420
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-    # =========================================================
-    # 3. ESG PILLAR RADAR
-    # =========================================================
-    st.markdown('<div class="section-header">ESG PILLAR RADAR</div>', unsafe_allow_html=True)
-
-    p_means = selected[['E_Score', 'S_Score', 'G_Score']].mean().reset_index()
-    p_means.columns = ['Pillar', 'Score']
-    p_means = pd.concat([p_means, p_means.iloc[[0]]])
-
-    benchmark = df[['E_Score', 'S_Score', 'G_Score']].mean().tolist()
-    benchmark.append(benchmark[0])
-
-    fig_radar = go.Figure()
-
-    fig_radar.add_trace(
-        go.Scatterpolar(
-            r=p_means['Score'],
-            theta=p_means['Pillar'],
-            fill='toself',
-            name='Selected Portfolio',
-            line=dict(color='#10b981', width=3),
-            fillcolor='rgba(16,185,129,0.25)'
-        )
-    )
-
-    fig_radar.add_trace(
-        go.Scatterpolar(
-            r=benchmark,
-            theta=p_means['Pillar'],
-            name='All Projects Avg',
-            line=dict(color='#8b949e', dash='dot')
-        )
-    )
-
-    fig_radar.update_layout(
-        polar=dict(radialaxis=dict(range=[0, 10])),
-        template="plotly_dark",
-        height=450
-    )
-
-    st.plotly_chart(fig_radar, use_container_width=True)
-
-     
+        fig_radar = go.Figure()
+        fig_radar.add_trace(go.Scatterpolar(r=p_means['Score'], theta=p_means['Pillar'], fill='toself', name='Selected Portfolio',
+                                           line=dict(color='#10b981', width=3), fillcolor='rgba(16,185,129,0.25)'))
+        fig_radar.add_trace(go.Scatterpolar(r=benchmark, theta=p_means['Pillar'], name='All Projects Avg', line=dict(color='#8b949e', dash='dot')))
+        fig_radar.update_layout(polar=dict(radialaxis=dict(range=[0, 10])), template="plotly_dark", height=450)
+        st.plotly_chart(fig_radar, use_container_width=True)
 
     elif nav == " SENSITIVITY":
         st.markdown('<div class="section-header">VALUE SENSITIVITY: BUDGET VS SUSTAINABILITY</div>', unsafe_allow_html=True)
@@ -316,10 +240,11 @@ def main():
         st.plotly_chart(px.imshow(h_map, x=[f"ESG {e:.1f}" for e in e_range], y=[f"${b/1e6:.1f}M" for b in b_range], color_continuous_scale='RdYlGn'), use_container_width=True)
         
         st.markdown('<div class="section-header">3-YEAR CASH OUTLAY SCHEDULE</div>', unsafe_allow_html=True)
-        selected['Y1'] = selected['Investment_Capital'] * selected['Phase_1_Cap']
-        selected['Y2'] = selected['Investment_Capital'] * selected['Phase_2_Cap']
-        selected['Y3'] = selected['Investment_Capital'] - (selected['Y1'] + selected['Y2'])
-        ph_sum = selected[['Y1', 'Y2', 'Y3']].sum().reset_index()
+        selected_copy = selected.copy()
+        selected_copy['Y1'] = selected_copy['Investment_Capital'] * selected_copy['Phase_1_Cap']
+        selected_copy['Y2'] = selected_copy['Investment_Capital'] * selected_copy['Phase_2_Cap']
+        selected_copy['Y3'] = selected_copy['Investment_Capital'] - (selected_copy['Y1'] + selected_copy['Y2'])
+        ph_sum = selected_copy[['Y1', 'Y2', 'Y3']].sum().reset_index()
         ph_sum.columns = ['Year', 'Outlay']
         st.plotly_chart(px.area(ph_sum, x='Year', y='Outlay', color_discrete_sequence=['#1f6feb']), use_container_width=True)
         
@@ -333,7 +258,6 @@ def main():
 
     elif nav == " RISK MANAGEMENT":
         st.markdown('<div class="section-header">STRATEGIC RISK-RETURN QUADRANT</div>', unsafe_allow_html=True)
-        
         m_r, m_p = df['Risk_Score'].median(), df['PI'].median()
         fig_q = px.scatter(df, x="Risk_Score", y="PI", color="Selected", size="Investment_Capital", text="Project_ID", color_discrete_map={1:'#238636', 0:'#30363d'})
         fig_q.add_hrect(y0=m_p, y1=df['PI'].max()*1.2, x0=0, x1=m_r, fillcolor="green", opacity=0.08, layer="below", annotation_text="STRATEGIC CORE")
@@ -363,9 +287,7 @@ def main():
         if st.button("EXECUTE INSTITUTIONAL ANALYSIS"):
             with st.spinner("AI Quant at work..."):
                 try:
-                    m_list = genai.list_models()
-                    m_name = [m.name for m in m_list if 'generateContent' in m.supported_generation_methods][0]
-                    model = genai.GenerativeModel(m_name)
+                    model = genai.GenerativeModel("gemini-1.5-flash")
                     res = model.generate_content(f"Deep Quant analysis for {target}. Value ${r['Strategic_Value']:.2f}, PI {r['PI']:.2f}, Sharpe {r['Sharpe_Score']:.2f}. Write a 3-bullet thesis.")
                     st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
                 except: st.error("AI rate limit. Wait 60s.")
