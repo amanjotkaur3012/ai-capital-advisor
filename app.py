@@ -127,29 +127,50 @@ def main():
     
     with t1:
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Capital Utilized", f"${selected['Investment_Capital'].sum():,.0f}", f"{selected['Investment_Capital'].sum()/budget*100:.1f}%")
-        c2.metric("Portfolio NPV", f"${selected['Strategic_Value'].sum():,.0f}")
-        c3.metric("Avg ESG Score", f"{selected['ESG_Score'].mean():.1f}/10")
-        c4.metric("Risk-Adjusted PI", f"{selected['PI'].mean():.2f}x")
+        c1.metric("Capital Allocated", f"${selected['Investment_Capital'].sum():,.0f}", help="Total budget deployed to approved projects.")
+        c2.metric("Portfolio Strategic NPV", f"${selected['Strategic_Value'].sum():,.0f}", help="Sum of traditional NPV plus the value of future growth options.")
+        c3.metric("Avg ESG Impact", f"{selected['ESG_Score'].mean():.1f}", help="Sustainability rating (1-10) of the selected projects.")
+        c4.metric("Agg. PI", f"{selected['PI'].mean():.2f}x", help="Profitability Index: Measures value created per dollar invested.")
         
-        st.write("### Institutional Investment Schedule")
+        st.write("### 📋 Final Investment Schedule")
         st.dataframe(selected[['Project_ID', 'Department', 'Investment_Capital', 'Pred_ROI', 'PI', 'ESG_Score']].style.background_gradient(cmap='Greens'))
+        
+        # ON-DEMAND AI FOR SUMMARY
+        if st.button("🤖 Explain My Portfolio Health"):
+            with st.spinner("Analyzing portfolio balance..."):
+                try:
+                    m_list = genai.list_models()
+                    available = [m.name for m in m_list if 'generateContent' in m.supported_generation_methods]
+                    m_name = "gemini-1.5-flash" if f"models/gemini-1.5-flash" in available else available[0].replace("models/", "")
+                    model = genai.GenerativeModel(m_name)
+                    
+                    summary_prompt = f"Explain this portfolio summary to a non-finance person in 3 bullet points: Budget used ${selected['Investment_Capital'].sum()}, NPV ${selected['Strategic_Value'].sum()}, Average PI {selected['PI'].mean():.2f}. Is this good use of capital?"
+                    response = model.generate_content(summary_prompt)
+                    st.info(response.text)
+                except Exception as e: st.error("Rate limit reached. Please wait 60 seconds.")
 
     with t2:
         col_l, col_r = st.columns(2)
         with col_l:
-            st.write("**Model Explainability: Feature Importance**")
+            st.write("**Feature Importance (ML Forecasting)**")
             fig_i = px.bar(feat_imp, x='Importance', y='Feature', orientation='h', color='Importance', color_continuous_scale='Teal')
             st.plotly_chart(fig_i, use_container_width=True)
         with col_r:
-            st.write("**Strategic Efficiency Frontier**")
+            st.write("**Efficiency Frontier**")
             fig_f = px.scatter(df, x="ESG_Score", y="Strategic_Value", size="Investment_Capital", color="Selected",
-                               color_discrete_map={1:'#10b981', 0:'#ff4b4b'}, labels={"Strategic_Value": "Strategic NPV ($)"})
+                               color_discrete_map={1:'#10b981', 0:'#ff4b4b'}, labels={"Strategic_Value": "Strategic Value ($)"})
             st.plotly_chart(fig_f, use_container_width=True)
+            
+        # ON-DEMAND AI FOR ML
+        if st.button("🤖 Explain the AI Logic"):
+            with st.spinner("Translating ML insights..."):
+                model = genai.GenerativeModel("gemini-1.5-flash")
+                ml_prompt = f"Explain why 'Feature Importance' and an 'Efficiency Frontier' matter for project selection in simple words. How does the AI know which projects to pick?"
+                response = model.generate_content(ml_prompt)
+                st.info(response.text)
 
     with t3:
-        st.subheader("Multi-Scenario Sensitivity Matrix")
-        st.write("Analyzing Portfolio Value ($) across Budget and ESG constraints.")
+        st.subheader("Sensitivity Matrix: The Budget-ESG Trade-off")
         b_range = np.linspace(budget * 0.8, budget * 1.2, 5)
         e_range = np.linspace(4, 9, 5)
         h_map = []
@@ -161,10 +182,16 @@ def main():
             h_map.append(row)
         
         
-        fig_h = px.imshow(h_map, x=[f"ESG {e:.1f}" for e in e_range], y=[f"${b/1e6:.1f}M" for b in b_range],
-                          color_continuous_scale='RdYlGn', labels=dict(x="ESG Hurdle", y="Budget", color="NPV"))
+        fig_h = px.imshow(h_map, x=[f"ESG {e:.1f}" for e in e_range], y=[f"${b/1e6:.1f}M" for b in b_range], color_continuous_scale='RdYlGn', labels=dict(x="Sustainability Hurdle", y="Budget Capacity", color="Total Value"))
         st.plotly_chart(fig_h, use_container_width=True)
-        st.info("Strategic Note: The heatmap identifies 'Efficient Zones' where total value creation peaks despite higher sustainability hurdles.")
+
+        # ON-DEMAND AI FOR HEATMAP
+        if st.button("🤖 Explain this Heatmap"):
+            with st.spinner("Interpreting matrix..."):
+                model = genai.GenerativeModel("gemini-1.5-flash")
+                h_prompt = "Explain this 'Budget vs ESG' heatmap. Why does the color turn from Green to Red as we move top-right? What does this mean for a company's goals?"
+                response = model.generate_content(h_prompt)
+                st.info(response.text)
 
     with t4:
         st.subheader("Strategic Risk-Return Quadrant")
@@ -172,15 +199,22 @@ def main():
         m_pi = df['PI'].median()
         
         
-        fig_q = px.scatter(df, x="Risk_Score", y="PI", color="Selected", size="Investment_Capital",
-                           hover_name="Project_ID", text="Project_ID",
-                           color_discrete_map={1: '#10b981', 0: '#455a64'},
-                           labels={"PI": "Profitability Index", "Risk_Score": "Risk Rating"})
-        
+        fig_q = px.scatter(df, x="Risk_Score", y="PI", color="Selected", size="Investment_Capital", hover_name="Project_ID", text="Project_ID", color_discrete_map={1: '#10b981', 0: '#455a64'})
         fig_q.update_traces(textposition='top center')
+        
+        # Quadrant Labeling
         fig_q.add_hrect(y0=m_pi, y1=df['PI'].max()*1.2, x0=0, x1=m_risk, fillcolor="green", opacity=0.08, layer="below", annotation_text="STRATEGIC CORE")
         fig_q.add_hrect(y0=0, y1=m_pi, x0=m_risk, x1=10, fillcolor="red", opacity=0.08, layer="below", annotation_text="VALUE TRAPS")
         st.plotly_chart(fig_q, use_container_width=True)
+
+        # ON-DEMAND AI FOR RISK QUADRANT
+        if st.button("🤖 Explain this Risk Chart"):
+            with st.spinner("Decoding Risk-Return paths..."):
+                model = genai.GenerativeModel("gemini-1.5-flash")
+                q_prompt = "Explain this Risk-Return Quadrant for a beginner. Why do we fund projects in the top-left and avoid projects in the bottom-right?"
+                response = model.generate_content(q_prompt)
+                st.info(response.text)
+
 
     with t5:
         st.subheader("Institutional AI Thesis")
