@@ -148,63 +148,33 @@ def main():
         fig_heat = px.imshow(h_map, x=[f"ESG {e:.1f}" for e in e_range], y=[f"${b/1e6:.1f}M" for b in b_range], color_continuous_scale='RdYlGn')
         st.plotly_chart(fig_heat, use_container_width=True)
 
-    with t4:
-        st.subheader("Strategic Risk-Return Quadrant")
+   with t4:
+        st.subheader("Strategic Risk-Return Analysis")
         
-        # Calculate Medians for clean quadrant lines
+        # Define the 4 decision zones
         median_risk = df['Risk_Score'].median()
         median_pi = df['PI'].median()
         
-        # Create the scatter plot with improved labeling
         fig_quad = px.scatter(
-            df, 
-            x="Risk_Score", 
-            y="PI", 
-            color="Selected", 
-            size="Investment_Capital",
-            hover_name="Project_ID", 
-            text="Project_ID", # Keep labels but we will style them
-            color_discrete_map={1: '#10b981', 0: '#334155'},
-            labels={"PI": "Profitability Index (Value)", "Risk_Score": "Risk Rating (1-10)"},
-            category_orders={"Selected": [1, 0]}
-        )
-        
-        # CLEANUP: Position labels so they don't sit directly on the bubbles
-        fig_quad.update_traces(
-            textposition='top center',
-            marker=dict(line=dict(width=1, color='DarkSlateGrey')),
-            selector=dict(mode='markers+text')
+            df, x="Risk_Score", y="PI", color="Selected", size="Investment_Capital",
+            hover_name="Project_ID", text="Project_ID",
+            color_discrete_map={1: '#00e676', 0: '#455a64'},
+            labels={"PI": "Profitability Index (Value)", "Risk_Score": "Risk Rating (1-10)"}
         )
 
-        # ADD STRATEGIC REGIONS: Using Shapes to color-code quadrants
+        # Cleanup: Move labels to avoid bubble overlap
+        fig_quad.update_traces(textposition='top center')
+
+        # Strategic Overlays (Shading)
         fig_quad.add_hrect(y0=median_pi, y1=df['PI'].max()*1.1, x0=0, x1=median_risk, 
-                          fillcolor="green", opacity=0.05, layer="below", line_width=0,
+                          fillcolor="green", opacity=0.08, layer="below", line_width=0,
                           annotation_text="STRATEGIC CORE")
         
         fig_quad.add_hrect(y0=0, y1=median_pi, x0=median_risk, x1=10, 
-                          fillcolor="red", opacity=0.05, layer="below", line_width=0,
+                          fillcolor="red", opacity=0.08, layer="below", line_width=0,
                           annotation_text="VALUE TRAPS")
 
-        # Layout Refinement
-        fig_quad.update_layout(
-            showlegend=True,
-            margin=dict(l=20, r=20, t=40, b=20),
-            xaxis=dict(gridcolor='#30363d', zeroline=False),
-            yaxis=dict(gridcolor='#30363d', zeroline=False),
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)'
-        )
-        
         st.plotly_chart(fig_quad, use_container_width=True)
-        
-        # ADD AN EXPLANATORY LEGEND BELOW THE CHART
-        st.markdown("""
-        #### 🔍 How to Read This Quadrant
-        * **Top-Left (High Value, Low Risk):** Priority funding. These projects offer high returns relative to their capital cost.
-        * **Top-Right (High Value, High Risk):** Speculative growth. High potential but requires strict risk-mitigation.
-        * **Bottom-Left (Low Value, Low Risk):** Defensive plays. Safe but offer marginal strategic wealth creation.
-        * **Bottom-Right (Low Value, High Risk):** **Value Traps.** Avoid these; they consume capital without adequate risk-adjusted returns.
-        """)
 
     with t5:
         st.subheader("AI Dealer Memo")
