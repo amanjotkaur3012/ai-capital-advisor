@@ -183,6 +183,7 @@ def main():
         )
 
         fig_imp = go.Figure()
+
         fig_imp.add_bar(
             x=feat_imp['Importance'],
             y=feat_imp['Feature'],
@@ -190,8 +191,7 @@ def main():
             marker_color=[
                 '#238636' if i == 0 else '#30363d'
                 for i in range(len(feat_imp))
-            ],
-            name="Importance"
+            ]
         )
 
         fig_imp.add_trace(
@@ -200,23 +200,21 @@ def main():
                 y=feat_imp['Feature'],
                 mode='lines+markers',
                 line=dict(color='#58a6ff', width=3),
-                name="Cumulative Impact",
                 xaxis="x2"
             )
         )
 
         fig_imp.update_layout(
             xaxis=dict(title="Importance"),
-            xaxis2=dict(overlaying="x", side="top", range=[0,1], title="Cumulative Impact"),
+            xaxis2=dict(overlaying="x", side="top", range=[0, 1], title="Cumulative Impact"),
             template="plotly_dark",
-            height=420,
-            margin=dict(l=40, r=40, t=40, b=40)
+            height=420
         )
 
         st.plotly_chart(fig_imp, use_container_width=True)
 
     # =========================================================
-    # 2. EFFICIENCY FRONTIER (DECISION OPTICS)
+    # 2. EFFICIENCY FRONTIER
     # =========================================================
     with col_r:
         st.write("**EFFICIENCY FRONTIER (OPTIMAL CAPITAL ZONE)**")
@@ -252,29 +250,23 @@ def main():
         fig.add_vline(x=avg_esg, line_dash="dot", line_color="#8b949e")
         fig.add_hline(y=avg_val, line_dash="dot", line_color="#8b949e")
 
-        fig.add_annotation(x=avg_esg-1, y=df['Strategic_Value'].max()*1.05,
-                           text="STRATEGIC CORE", showarrow=False, font=dict(color="#10b981", size=12))
-        fig.add_annotation(x=avg_esg+1, y=df['Strategic_Value'].min()*1.1,
-                           text="CAPITAL TRAPS", showarrow=False, font=dict(color="#f85149", size=12))
-
         fig.update_layout(
             template="plotly_dark",
-            height=420,
-            margin=dict(l=40, r=40, t=40, b=40)
+            height=420
         )
 
         st.plotly_chart(fig, use_container_width=True)
 
     # =========================================================
-    # 3. ESG PILLAR RADAR (EXECUTIVE VERSION)
+    # 3. ESG PILLAR RADAR
     # =========================================================
     st.markdown('<div class="section-header">ESG PILLAR RADAR</div>', unsafe_allow_html=True)
 
     p_means = selected[['E_Score', 'S_Score', 'G_Score']].mean().reset_index()
     p_means.columns = ['Pillar', 'Score']
-    p_means = pd.concat([p_means, p_means.iloc[[0]]])  # close loop
+    p_means = pd.concat([p_means, p_means.iloc[[0]]])
 
-    benchmark = df[['E_Score', 'S_Score', 'G_Score']].mean().values.tolist()
+    benchmark = df[['E_Score', 'S_Score', 'G_Score']].mean().tolist()
     benchmark.append(benchmark[0])
 
     fig_radar = go.Figure()
@@ -295,35 +287,18 @@ def main():
             r=benchmark,
             theta=p_means['Pillar'],
             name='All Projects Avg',
-            line=dict(color='#8b949e', dash='dot'),
+            line=dict(color='#8b949e', dash='dot')
         )
     )
 
     fig_radar.update_layout(
-        polar=dict(
-            radialaxis=dict(visible=True, range=[0, 10]),
-            bgcolor="#0d1117"
-        ),
+        polar=dict(radialaxis=dict(range=[0, 10])),
         template="plotly_dark",
-        height=450,
-        showlegend=True
+        height=450
     )
 
     st.plotly_chart(fig_radar, use_container_width=True)
 
-    # =========================================================
-    # AI EXPLANATION
-    # =========================================================
-    if st.button("Explain ML & ESG Logic"):
-        with st.spinner("Translating analytics into executive insight..."):
-            try:
-                model = genai.GenerativeModel("gemini-1.5-flash")
-                res = model.generate_content(
-                    "Explain feature importance, efficiency frontier, and ESG radar like an institutional investment memo."
-                )
-                st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
-            except:
-                st.warning("AI cooling down.")
 
 
     elif nav == " SENSITIVITY":
