@@ -4,6 +4,12 @@
 # Author: Aman
 # =========================================================
 
+# =========================================================
+# FINCAP-AI | Intelligent Capital Allocation Advisor
+# MSc Finance & Analytics Live Project - Strategic Edition
+# Author: Aman
+# =========================================================
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -13,7 +19,6 @@ from sklearn.ensemble import RandomForestRegressor
 import pulp
 import google.generativeai as genai
 from scipy.stats import norm
-import io
 
 # ----------------------------------------------------
 # 0. BACKEND CONFIGURATION & API
@@ -58,11 +63,9 @@ def run_optimization(df, budget, esg_hurdle):
     """Mixed Integer Programming to maximize Portfolio Strategic Value."""
     prob = pulp.LpProblem("Portfolio_Opt", pulp.LpMaximize)
     xs = pulp.LpVariable.dicts("Select", df.index, cat=pulp.LpBinary)
-    
     prob += pulp.lpSum([df.loc[i, 'Strategic_Value'] * xs[i] for i in df.index])
     prob += pulp.lpSum([df.loc[i, 'Investment_Capital'] * xs[i] for i in df.index]) <= budget
-    prob += pulp.lpSum([df.loc[i, 'ESG_Score'] * xs[i] for i in df.index]) >= esg_hurdle * pulp.lpSum([xs[i] for i in df.index])
-    
+    prob += pulp.lpSum([df.loc[i, 'ESG_Total'] * xs[i] for i in df.index]) >= esg_hurdle * pulp.lpSum([xs[i] for i in df.index])
     prob.solve(pulp.PULP_CBC_CMD(msg=0))
     df['Selected'] = [pulp.value(xs[i]) for i in df.index]
     return df
@@ -73,7 +76,7 @@ def run_optimization(df, budget, esg_hurdle):
 
 def main():
     st.markdown('<p class="main-title">STRATOS | Capital Allocation Advisor</p>', unsafe_allow_html=True)
-    st.markdown('<p style="color: #8b949e; margin-bottom: 30px;">Institutional Strategy & Multi-Criteria Decision Support System</p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #8b949e; margin-bottom: 30px;">MSc Finance & Analytics | Advanced Strategic Decision System</p>', unsafe_allow_html=True)
 
     with st.sidebar:
         st.header("Data Management")
@@ -83,194 +86,124 @@ def main():
         st.header("Financial Benchmarks")
         rf_rate = st.slider("Risk-Free Rate (Rf)", 0.0, 8.0, 4.2) / 100
         budget = st.number_input("Capital Constraint ($)", value=5500000, step=500000)
-        esg_min = st.slider("ESG Sustainability Hurdle", 1, 10, 6)
+        esg_min = st.slider("Global ESG Hurdle", 1, 10, 6)
 
-    # Dataset Generation/Loading
+    # Dataset Generation with ESG Pillar Breakdown
     if up_file:
         df = pd.read_csv(up_file)
     else:
         np.random.seed(42)
         df = pd.DataFrame({
             'Project_ID': [f"FIN-{i:03d}" for i in range(1, 26)],
-            'Department': np.random.choice(['ESG Fintech', 'R&D', 'Core Infrastructure', 'Digital Assets'], 25),
-            'Investment_Capital': np.random.choice([200000, 500000, 750000, 1250000, 2000000], 25),
+            'Department': np.random.choice(['ESG Fintech', 'R&D', 'Infra', 'Digital Assets'], 25),
+            'Investment_Capital': np.random.choice([250000, 500000, 1000000, 1500000], 25),
             'Risk_Score': np.random.uniform(2.0, 9.5, 25),
-            'ESG_Score': np.random.uniform(3.0, 10.0, 25),
+            'E_Pillar': np.random.uniform(1, 10, 25),
+            'S_Pillar': np.random.uniform(1, 10, 25),
+            'G_Pillar': np.random.uniform(1, 10, 25),
             'Volatility': np.random.uniform(0.12, 0.45, 25),
             'Strategic_Alignment': np.random.randint(4, 11, 25)
         })
+        df['ESG_Total'] = (df['E_Pillar'] + df['S_Pillar'] + df['G_Pillar']) / 3
         df['Actual_ROI'] = (df['Strategic_Alignment'] * 1.8) - (df['Risk_Score'] * 0.5) + 11 + np.random.normal(0, 1.5, 25)
 
     # ML Forecaster
-    feats = ['Investment_Capital', 'Risk_Score', 'ESG_Score', 'Volatility', 'Strategic_Alignment']
+    feats = ['Investment_Capital', 'Risk_Score', 'ESG_Total', 'Volatility', 'Strategic_Alignment']
     rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
     rf_model.fit(df[feats], df['Actual_ROI'])
     df['Pred_ROI'] = rf_model.predict(df[feats])
     feat_imp = pd.DataFrame({'Feature': feats, 'Importance': rf_model.feature_importances_})
 
-    # Quantitative Metrics
+    # Quantitative Metrics (Sharpe Score Addition)
     wacc = rf_rate + 0.06 
     df['ROA_Value'] = df.apply(lambda x: black_scholes_roa(x['Investment_Capital']*1.35, x['Investment_Capital'], 2, rf_rate, x['Volatility']), axis=1)
     df['NPV'] = (df['Investment_Capital'] * (df['Pred_ROI']/100)) / wacc
     df['Strategic_Value'] = df['NPV'] + df['ROA_Value']
     df['PI'] = df['Strategic_Value'] / df['Investment_Capital']
+    # Sharpe Score = (Expected Return - Rf) / Volatility
+    df['Sharpe_Score'] = ((df['Pred_ROI']/100) - rf_rate) / df['Volatility']
 
     # Solver Implementation
     df = run_optimization(df, budget, esg_min)
     selected = df[df['Selected'] == 1]
 
     # --- DASHBOARD TABS ---
-    t1, t2, t3, t4, t5 = st.tabs(["🚀 Summary", "🧠 ML Analytics", "📊 Sensitivity", "🛡️ Risk Quadrant", "🤖 AI Thesis"])
+    t1, t2, t3, t4, t5 = st.tabs(["🚀 Summary", "🌍 ESG Pillars", "📅 Lifecycle", "🛡️ Risk & Sharpe", "🤖 AI Thesis"])
     
     with t1:
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Capital Allocated", f"${selected['Investment_Capital'].sum():,.0f}", help="Total budget deployed.")
-        c2.metric("Portfolio Strategic NPV", f"${selected['Strategic_Value'].sum():,.0f}", help="Traditional NPV + Real Options Value.")
-        c3.metric("Avg ESG Impact", f"{selected['ESG_Score'].mean():.1f}", help="Average sustainability rating.")
-        c4.metric("Agg. PI", f"{selected['PI'].mean():.2f}x", help="Value created per dollar invested.")
+        c1.metric("Capital Allocated", f"${selected['Investment_Capital'].sum():,.0f}")
+        c2.metric("Portfolio Strategic Value", f"${selected['Strategic_Value'].sum():,.0f}")
+        c3.metric("Avg Portfolio Sharpe", f"{selected['Sharpe_Score'].mean():.2f}")
+        c4.metric("Agg. PI", f"{selected['PI'].mean():.2f}x")
         
-        st.write("### 📋 Final Investment Schedule")
-        st.dataframe(selected[['Project_ID', 'Department', 'Investment_Capital', 'Pred_ROI', 'PI', 'ESG_Score']].style.background_gradient(cmap='Greens'))
+        st.write("### 📋 Portfolio Investment Schedule")
+        st.dataframe(selected[['Project_ID', 'Department', 'Investment_Capital', 'Pred_ROI', 'Sharpe_Score', 'ESG_Total']].style.background_gradient(cmap='Greens'))
         
-        # Portfolio Risk Snapshot Addition
-        st.markdown("---")
-        st.markdown("### 📉 Portfolio Risk Snapshot")
-        portfolio_returns = selected['Pred_ROI'] / 100
-        mu_p = portfolio_returns.mean()
-        sigma_p = portfolio_returns.std()
-        VaR_95 = norm.ppf(0.05, mu_p, sigma_p)
-        CVaR_95 = mu_p - (sigma_p * norm.pdf(norm.ppf(0.05)) / 0.05)
-
-        r1, r2, r3 = st.columns(3)
-        r1.metric("Expected Return", f"{mu_p:.2%}")
-        r2.metric("VaR (95%)", f"{VaR_95:.2%}")
-        r3.metric("CVaR (95%)", f"{CVaR_95:.2%}")
-        st.caption("Institutional downside risk metrics (Value at Risk & Conditional VaR).")
-
-        # ON-DEMAND AI FOR SUMMARY
         if st.button("🤖 Explain My Portfolio Health"):
-            with st.spinner("Analyzing portfolio balance..."):
+            with st.spinner("Analyzing..."):
                 try:
                     m_list = genai.list_models()
                     available = [m.name for m in m_list if 'generateContent' in m.supported_generation_methods]
                     m_name = "gemini-1.5-flash" if f"models/gemini-1.5-flash" in available else available[0].replace("models/", "")
                     model = genai.GenerativeModel(m_name)
-                    summary_prompt = f"Explain this portfolio summary to a non-finance person in 3 bullet points: Budget used ${selected['Investment_Capital'].sum()}, NPV ${selected['Strategic_Value'].sum()}, Average PI {selected['PI'].mean():.2f}."
+                    summary_prompt = f"CEO Brief: Budget used ${selected['Investment_Capital'].sum()}, Sharpe {selected['Sharpe_Score'].mean():.2f}, PI {selected['PI'].mean():.2f}. Comment on efficiency."
                     response = model.generate_content(summary_prompt)
                     st.info(response.text)
-                except Exception as e: st.error("AI Service busy. Please retry.")
+                except Exception as e: st.error("AI Cooling down.")
 
     with t2:
-        col_l, col_r = st.columns(2)
-        with col_l:
-            st.write("**Feature Importance (ML Forecasting)**")
-            fig_i = px.bar(feat_imp, x='Importance', y='Feature', orientation='h', color='Importance', color_continuous_scale='Teal')
-            st.plotly_chart(fig_i, use_container_width=True)
-        with col_r:
-            st.write("**Efficiency Frontier**")
-            fig_f = px.scatter(df, x="ESG_Score", y="Strategic_Value", size="Investment_Capital", color="Selected",
-                               color_discrete_map={1:'#10b981', 0:'#ff4b4b'}, labels={"Strategic_Value": "Strategic Value ($)"})
-            st.plotly_chart(fig_f, use_container_width=True)
-        
-        # Capital Efficiency Ladder Addition
-        st.markdown("---")
-        st.markdown("### 🏆 Capital Efficiency Ranking")
-        eff = selected.sort_values("PI", ascending=False)
-        st.dataframe(eff[['Project_ID', 'Department', 'PI', 'Pred_ROI', 'ESG_Score']], use_container_width=True)
-            
-        if st.button("🤖 Explain the AI Logic"):
-            with st.spinner("Translating ML insights..."):
-                model = genai.GenerativeModel("gemini-1.5-flash")
-                ml_prompt = "Explain why 'Feature Importance' and an 'Efficiency Frontier' matter for project selection in simple words."
-                response = model.generate_content(ml_prompt)
-                st.info(response.text)
+        st.subheader("ESG Pillar Breakdown Analysis")
+        # Visualizing Environmental, Social, and Governance individually
+        pillar_df = selected[['Project_ID', 'E_Pillar', 'S_Pillar', 'G_Pillar']].melt(id_vars='Project_ID', var_name='Pillar', value_name='Score')
+        fig_esg = px.bar(pillar_df, x='Project_ID', y='Score', color='Pillar', barmode='group', color_discrete_sequence=['#10b981', '#3b82f6', '#fbbf24'])
+        st.plotly_chart(fig_esg, use_container_width=True)
+        st.info("💡 Strategic Insights: Analyzes the trade-off between sustainability dimensions. High Environmental scores often correlate with Green Tax benefits.")
 
     with t3:
-        st.subheader("Sensitivity Matrix: The Budget-ESG Trade-off")
-        b_range = np.linspace(budget * 0.8, budget * 1.2, 5)
-        e_range = np.linspace(4, 9, 5)
-        h_map = []
-        for b in b_range:
-            row = []
-            for e in e_range:
-                temp = run_optimization(df.copy(), b, e)
-                row.append(temp[temp['Selected'] == 1]['Strategic_Value'].sum())
-            h_map.append(row)
-        
-        fig_h = px.imshow(h_map, x=[f"ESG {e:.1f}" for e in e_range], y=[f"${b/1e6:.1f}M" for b in b_range], color_continuous_scale='RdYlGn', labels=dict(x="Sustainability Hurdle", y="Budget Capacity", color="Total Value"))
-        st.plotly_chart(fig_h, use_container_width=True)
-
-        # Macro Scenario Stress Test Addition
-        st.markdown("---")
-        st.markdown("### 🌍 Macro Scenario Stress Test")
-        scenarios = {"Recession": 0.7, "Base Case": 1.0, "Economic Boom": 1.3, "Rate Shock": 0.85}
-        scenario_results = {k: (selected['Strategic_Value'] * v).sum() for k, v in scenarios.items()}
-        fig_s = px.bar(x=scenario_results.keys(), y=scenario_results.values(), labels={"x": "Scenario", "y": "Portfolio Value"}, title="Portfolio Value Sensitivity")
-        st.plotly_chart(fig_s, use_container_width=True)
-
-        if st.button("🤖 Explain this Heatmap"):
-            with st.spinner("Interpreting matrix..."):
-                model = genai.GenerativeModel("gemini-1.5-flash")
-                h_prompt = "Explain this 'Budget vs ESG' heatmap. Why do we look at trade-offs in finance?"
-                response = model.generate_content(h_prompt)
-                st.info(response.text)
+        st.subheader("Project Lifecycle Phasing (3-Year Horizon)")
+        # Simulating a Capex distribution over Year 1, 2, and 3
+        selected['Year_1'] = selected['Investment_Capital'] * 0.5
+        selected['Year_2'] = selected['Investment_Capital'] * 0.3
+        selected['Year_3'] = selected['Investment_Capital'] * 0.2
+        phase_df = selected[['Project_ID', 'Year_1', 'Year_2', 'Year_3']].melt(id_vars='Project_ID', var_name='Year', value_name='Capex')
+        fig_phase = px.bar(phase_df, x='Year', y='Capex', color='Project_ID', title="Portfolio Cash Outflow Phasing", color_discrete_sequence=px.colors.qualitative.Pastel)
+        st.plotly_chart(fig_phase, use_container_width=True)
 
     with t4:
-        st.subheader("Strategic Risk-Return Quadrant")
-        m_risk = df['Risk_Score'].median()
-        m_pi = df['PI'].median()
+        st.subheader("Risk-Efficiency Analysis (Sharpe Score)")
+        fig_sharpe = px.scatter(selected, x="Risk_Score", y="Sharpe_Score", size="Investment_Capital", color="Department",
+                                hover_name="Project_ID", labels={"Sharpe_Score": "Risk-Adjusted Return (Sharpe)"}, title="Sharpe Efficiency vs. Project Risk")
+        st.plotly_chart(fig_sharpe, use_container_width=True)
         
-        fig_q = px.scatter(df, x="Risk_Score", y="PI", color="Selected", size="Investment_Capital", hover_name="Project_ID", text="Project_ID", color_discrete_map={1: '#10b981', 0: '#455a64'})
-        fig_q.update_traces(textposition='top center')
-        fig_q.add_hrect(y0=m_pi, y1=df['PI'].max()*1.2, x0=0, x1=m_risk, fillcolor="green", opacity=0.08, layer="below", annotation_text="STRATEGIC CORE")
-        fig_q.add_hrect(y0=0, y1=m_pi, x0=m_risk, x1=10, fillcolor="red", opacity=0.08, layer="below", annotation_text="VALUE TRAPS")
-        st.plotly_chart(fig_q, use_container_width=True)
-
-        # Portfolio Mix Addition
+        # Portfolio Risk Metrics Snapshot
         st.markdown("---")
-        st.markdown("### 🍩 Portfolio Capital Allocation Mix")
-        fig_mix = px.pie(selected, names='Department', values='Investment_Capital', hole=0.45)
-        st.plotly_chart(fig_mix, use_container_width=True)
-
-        if st.button("🤖 Explain this Risk Chart"):
-            with st.spinner("Decoding Risk-Return paths..."):
-                model = genai.GenerativeModel("gemini-1.5-flash")
-                q_prompt = "Explain this Risk-Return Quadrant for a beginner."
-                response = model.generate_content(q_prompt)
-                st.info(response.text)
+        mu_p = (selected['Pred_ROI'] / 100).mean()
+        sigma_p = (selected['Pred_ROI'] / 100).std()
+        VaR_95 = norm.ppf(0.05, mu_p, sigma_p)
+        st.metric("Portfolio Value-at-Risk (95%)", f"{VaR_95:.2%}")
 
     with t5:
-        st.subheader("Institutional AI Thesis")
-        target = st.selectbox("Select Project for AI Deep Dive", selected['Project_ID'])
+        st.subheader("Deep-Dive AI Investment Thesis")
+        target = st.selectbox("Select Project for AI Expert Review", selected['Project_ID'])
         r = selected[selected['Project_ID'] == target].iloc[0]
         
-        if st.button("Consult AI Analyst"):
+        if st.button("🖋️ Generate Expert Memo"):
             with st.spinner("Accessing LLM Logic..."):
                 try:
                     m_list = genai.list_models()
                     available = [m.name for m in m_list if 'generateContent' in m.supported_generation_methods]
                     m_name = "gemini-1.5-flash" if f"models/gemini-1.5-flash" in available else available[0].replace("models/", "")
-                    
                     model = genai.GenerativeModel(m_name)
-                    prompt = f"Senior Quant perspective: Analyze {target}. Strategic Value ${r['Strategic_Value']:.2f}, PI {r['PI']:.2f}, ESG {r['ESG_Score']}. Discuss trade-off."
+                    prompt = f"Role: Senior Quant. Analyze {target}. Sharpe {r['Sharpe_Score']:.2f}, E: {r['E_Pillar']}, S: {r['S_Pillar']}, G: {r['G_Pillar']}. Is this high-quality capital usage?"
                     response = model.generate_content(prompt)
                     st.success(f"Analyst: {m_name.upper()}")
-                    st.write(response.text)
-                except Exception as e:
-                    if "429" in str(e):
-                        st.error("⚠️ Rate Limit Reached. Please wait 60 seconds.")
-                    else:
-                        st.error(f"AI Connection Error: {e}")
+                    st.markdown(response.text)
+                except Exception as e: st.error(f"Error: {e}")
 
-    # Export Section Addition
+    # Export Logic
     st.markdown("---")
-    st.markdown("### 📥 Export for Investment Committee")
-    st.download_button(
-        "Download Approved Portfolio (CSV)",
-        selected.to_csv(index=False),
-        file_name="Approved_Portfolio.csv",
-        mime="text/csv"
-    )
+    st.download_button("📥 Download Strategic Portfolio (CSV)", selected.to_csv(index=False), "Stratos_Portfolio.csv", "text/csv")
 
 if __name__ == "__main__":
     main()
