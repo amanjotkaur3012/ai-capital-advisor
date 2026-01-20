@@ -488,28 +488,146 @@ def main():
                 except:
                     st.warning("AI cooling down.")
 
-    elif nav == " RISK MANAGEMENT":
-        st.markdown('<div class="section-header">STRATEGIC RISK-RETURN QUADRANT</div>', unsafe_allow_html=True)
-        m_r, m_p = df['Risk_Score'].median(), df['PI'].median()
-        fig_q = px.scatter(df, x="Risk_Score", y="PI", color="Selected", size="Investment_Capital", text="Project_ID", color_discrete_map={1:'#238636', 0:'#30363d'})
-        fig_q.add_hrect(y0=m_p, y1=df['PI'].max()*1.2, x0=0, x1=m_r, fillcolor="green", opacity=0.08, layer="below", annotation_text="STRATEGIC CORE")
-        fig_q.add_hrect(y0=0, y1=m_p, x0=m_r, x1=10, fillcolor="red", opacity=0.08, layer="below", annotation_text="VALUE TRAPS")
+elif nav == " RISK MANAGEMENT":
+        # ============================================================
+        # 1. STRATEGIC RISK–RETURN QUADRANT
+        # ============================================================
+
+        st.markdown('<div class="section-header">STRATEGIC RISK–RETURN QUADRANT</div>', unsafe_allow_html=True)
+
+        m_r = df['Risk_Score'].median()
+        m_p = df['PI'].median()
+
+        df['Quadrant'] = np.where(
+            (df['Risk_Score'] <= m_r) & (df['PI'] >= m_p), 'CORE',
+            np.where(
+                (df['Risk_Score'] > m_r) & (df['PI'] >= m_p), 'SPECULATIVE',
+                np.where(
+                    (df['Risk_Score'] <= m_r) & (df['PI'] < m_p), 'DEFENSIVE',
+                    'EXIT'
+                )
+            )
+        )
+
+        fig_q = px.scatter(
+            df,
+            x="Risk_Score",
+            y="PI",
+            color="Quadrant",
+            size="Investment_Capital",
+            text="Project_ID",
+            hover_data=["Pred_ROI", "Strategic_Value"],
+            title="Project Classification by Risk and Return",
+            color_discrete_map={
+                "CORE": "#238636",
+                "SPECULATIVE": "#f59e0b",
+                "DEFENSIVE": "#3b82f6",
+                "EXIT": "#dc2626"
+            }
+        )
+
+        fig_q.add_hline(y=m_p, line_dash="dot")
+        fig_q.add_vline(x=m_r, line_dash="dot")
+
+        fig_q.update_layout(
+            xaxis_title="Risk Score (Lower = Safer)",
+            yaxis_title="Profitability Index (Higher = Better)",
+            title_font_size=18
+        )
+
         st.plotly_chart(fig_q, use_container_width=True)
-        
+
+        core_pct = (df['Quadrant'] == 'CORE').mean() * 100
+        exit_pct = (df['Quadrant'] == 'EXIT').mean() * 100
+
+        st.markdown(
+            f"""
+            **Portfolio Composition**
+            - Strategic core projects: {core_pct:.1f}%
+            - Exit or restructure candidates: {exit_pct:.1f}%
+            """,
+            unsafe_allow_html=True
+        )
+
+        # ============================================================
+        # 2. DOWNSIDE RISK METRICS (VaR & SHARPE)
+        # ============================================================
+
         st.markdown('<div class="section-header">DOWNSIDE RISK (VaR & SHARPE)</div>', unsafe_allow_html=True)
+
         mu_p = (selected['Pred_ROI'] / 100).mean()
         sig_p = (selected['Pred_ROI'] / 100).std()
+
+        var95 = norm.ppf(0.05, mu_p, sig_p)
+        sharpe_avg = selected['Sharpe_Score'].mean()
+
         k1, k2 = st.columns(2)
-        k1.metric("VAR (95% CONFIDENCE)", f"{norm.ppf(0.05, mu_p, sig_p):.2%}")
-        k2.metric("SHARPE RATIO AVG", f"{selected['Sharpe_Score'].mean():.2f}")
+        k1.metric("Value at Risk (95%)", f"{abs(var95):.2%}")
+        k2.metric("Average Sharpe Ratio", f"{sharpe_avg:.2f}")
+
+        # Risk quality classification (data-driven)
+        if sharpe_avg >= 1.0 and abs(var95) <= 0.20:
+            risk_quality = "STRONG"
+        elif sharpe_avg >= 0.7:
+            risk_quality = "ACCEPTABLE"
+        else:
+            risk_quality = "WEAK"
+
+        st.markdown(
+            f"""
+            **Risk Quality Assessment**
+            - Portfolio risk-adjusted return quality: {risk_quality}
+            - Expected downside loss under normal conditions: {abs(var95):.2%}
+            """,
+            unsafe_allow_html=True
+        )
+
+        # ============================================================
+        # 3. EXECUTIVE RISK ACTION SIGNAL
+        # ============================================================
+
+        st.markdown('<div class="section-header">EXECUTIVE RISK ACTION SIGNAL</div>', unsafe_allow_html=True)
+
+        if core_pct >= 60 and sharpe_avg >= 0.9:
+            action = "MAINTAIN CURRENT ALLOCATION"
+        elif exit_pct >= 30:
+            action = "REBALANCE AND REDUCE EXPOSURE TO WEAK PROJECTS"
+        else:
+            action = "REVIEW HEDGING AND CAPITAL STAGING STRATEGY"
+
+        st.markdown(
+            f"""
+            **Recommended Action**
+            {action}
+            """,
+            unsafe_allow_html=True
+        )
+
+        # ============================================================
+        # 4. AI INTERPRETATION (PRESERVED, IMPROVED PROMPT)
+        # ============================================================
 
         if st.button("Interpret Risk Exposure"):
-            with st.spinner("Decoding Risk..."):
+            with st.spinner("Analyzing portfolio risk..."):
                 try:
                     model = genai.GenerativeModel("gemini-1.5-flash")
-                    res = model.generate_content(f"Analyze risk for a CFO. Portfolio VaR is {norm.ppf(0.05, mu_p, sig_p):.2%} and Sharpe Ratio is {selected['Sharpe_Score'].mean():.2f}. Explain what this means for capital safety.")
+                    res = model.generate_content(
+                        f"""
+                        Provide a professional risk assessment for a CFO:
+
+                        - Core project share: {core_pct:.1f}%
+                        - Exit candidate share: {exit_pct:.1f}%
+                        - Value at Risk (95%): {abs(var95):.2%}
+                        - Average Sharpe Ratio: {sharpe_avg:.2f}
+                        - Risk quality: {risk_quality}
+                        - Recommended action: {action}
+
+                        Focus on capital protection, stability, and governance implications.
+                        """
+                    )
                     st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
-                except: st.warning("AI cooling down.")
+                except:
+                    st.warning("AI temporarily unavailable. Please retry.")
 
     elif nav == " INSTITUTIONAL THESIS":
         st.markdown('<div class="section-header">PROJECT DEEP-DIVE THESIS</div>', unsafe_allow_html=True)
