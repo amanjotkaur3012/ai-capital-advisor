@@ -148,6 +148,24 @@ def main():
                     response = model.generate_content(summary_prompt)
                     st.info(response.text)
                 except Exception as e: st.error("Rate limit reached. Please wait 60 seconds.")
+       
+# ===== ADDITION START: Portfolio Risk Metrics =====
+st.markdown("### 📉 Portfolio Risk Snapshot")
+
+portfolio_returns = selected['Pred_ROI'] / 100
+mu_p = portfolio_returns.mean()
+sigma_p = portfolio_returns.std()
+
+VaR_95 = norm.ppf(0.05, mu_p, sigma_p)
+CVaR_95 = mu_p - (sigma_p * norm.pdf(norm.ppf(0.05)) / 0.05)
+
+r1, r2, r3 = st.columns(3)
+r1.metric("Expected Return", f"{mu_p:.2%}")
+r2.metric("VaR (95%)", f"{VaR_95:.2%}")
+r3.metric("CVaR (95%)", f"{CVaR_95:.2%}")
+
+st.caption("Downside risk metrics used by institutional portfolio managers.")
+
 
     with t2:
         col_l, col_r = st.columns(2)
@@ -168,6 +186,17 @@ def main():
                 ml_prompt = f"Explain why 'Feature Importance' and an 'Efficiency Frontier' matter for project selection in simple words. How does the AI know which projects to pick?"
                 response = model.generate_content(ml_prompt)
                 st.info(response.text)
+
+# ===== ADDITION START: Capital Efficiency Ladder =====
+st.markdown("### 🏆 Capital Efficiency Ranking")
+
+eff = selected.sort_values("PI", ascending=False)
+st.dataframe(
+    eff[['Project_ID', 'Department', 'PI', 'Pred_ROI', 'ESG_Score']],
+    use_container_width=True
+)
+# ===== ADDITION END =====
+
 
     with t3:
         st.subheader("Sensitivity Matrix: The Budget-ESG Trade-off")
@@ -193,6 +222,31 @@ def main():
                 response = model.generate_content(h_prompt)
                 st.info(response.text)
 
+# ===== ADDITION START: Scenario Stress Test =====
+st.markdown("### 🌍 Macro Scenario Stress Test")
+
+scenarios = {
+    "Recession": 0.7,
+    "Base Case": 1.0,
+    "Economic Boom": 1.3,
+    "Rate Shock": 0.85
+}
+
+scenario_results = {
+    k: (selected['Strategic_Value'] * v).sum()
+    for k, v in scenarios.items()
+}
+
+fig_s = px.bar(
+    x=scenario_results.keys(),
+    y=scenario_results.values(),
+    labels={"x": "Scenario", "y": "Portfolio Strategic Value"},
+    title="Portfolio Value Under Macro Scenarios"
+)
+st.plotly_chart(fig_s, use_container_width=True)
+# ===== ADDITION END =====
+
+
     with t4:
         st.subheader("Strategic Risk-Return Quadrant")
         m_risk = df['Risk_Score'].median()
@@ -214,6 +268,19 @@ def main():
                 q_prompt = "Explain this Risk-Return Quadrant for a beginner. Why do we fund projects in the top-left and avoid projects in the bottom-right?"
                 response = model.generate_content(q_prompt)
                 st.info(response.text)
+
+# ===== ADDITION START: Portfolio Mix =====
+st.markdown("### 🍩 Portfolio Capital Allocation Mix")
+
+fig_mix = px.pie(
+    selected,
+    names='Department',
+    values='Investment_Capital',
+    hole=0.45
+)
+st.plotly_chart(fig_mix, use_container_width=True)
+# ===== ADDITION END =====
+
 
 
     with t5:
@@ -241,6 +308,18 @@ def main():
                         st.info("Tip for Assignment: In a production environment, we would implement an asynchronous queue or a paid tier to handle high request volumes.")
                     else:
                         st.error(f"AI Connection Error: {e}")
+
+# ===== ADDITION START: Export =====
+st.markdown("### 📥 Export for Investment Committee")
+
+st.download_button(
+    "Download Approved Portfolio (CSV)",
+    selected.to_csv(index=False),
+    file_name="Approved_Portfolio.csv",
+    mime="text/csv"
+)
+# ===== ADDITION END =====
+
 
 if __name__ == "__main__":
     main()
