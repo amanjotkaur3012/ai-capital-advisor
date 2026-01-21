@@ -777,20 +777,128 @@ def main():
 
     
     elif nav == " INSTITUTIONAL THESIS":
-        st.markdown('<div class="section-header">PROJECT DEEP-DIVE THESIS</div>', unsafe_allow_html=True)
-        target = st.selectbox("SELECT PROJECT FOR QUANT ANALYSIS", selected['Project_ID'])
+
+        st.markdown('<div class="section-header">PROJECT INVESTMENT THESIS</div>', unsafe_allow_html=True)
+
+        target = st.selectbox(
+            "Select Project for Institutional Review",
+            selected['Project_ID']
+        )
+
         r = selected[selected['Project_ID'] == target].iloc[0]
-        
-        if st.button("Interpret Project Thesis"):
-            with st.spinner("AI Quant at work..."):
+
+        # ============================================================
+        # 1. PROJECT SNAPSHOT (NUMBERS FIRST)
+        # ============================================================
+
+        st.markdown("### Project Snapshot")
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Capital Required", f"${r['Investment_Capital']:,.0f}")
+        c2.metric("Predicted ROI", f"{r['Pred_ROI']:.2f}%")
+        c3.metric("Profitability Index", f"{r['PI']:.2f}x")
+        c4.metric("Risk Score", f"{r['Risk_Score']:.1f}")
+
+        # ============================================================
+        # 2. VALUE CREATION LOGIC
+        # ============================================================
+
+        st.markdown("### Value Creation Logic")
+
+        value_quality = r['Pred_ROI'] / r['Risk_Score']
+
+        st.markdown(
+            f"""
+            - Strategic value generated: ${r['Strategic_Value']:,.0f}
+            - Risk-adjusted return efficiency: {value_quality:.2f}
+            - ESG alignment score: {r['ESG_Score']:.2f}
+            """,
+            unsafe_allow_html=True
+        )
+
+        # ============================================================
+        # 3. CAPITAL STAGING LOGIC
+        # ============================================================
+
+        st.markdown("### Capital Deployment Structure")
+
+        st.markdown(
+            f"""
+            - Phase 1 capital: {r['Phase_1_Cap']*100:.0f}% of total
+            - Phase 2 capital: {r['Phase_2_Cap']*100:.0f}% of total
+            - Final tranche: {(1 - r['Phase_1_Cap'] - r['Phase_2_Cap'])*100:.0f}% of total
+            """,
+            unsafe_allow_html=True
+        )
+
+        # ============================================================
+        # 4. DOWNSIDE RISKS (DATA-DRIVEN)
+        # ============================================================
+
+        st.markdown("### Key Risks")
+
+        risk_flags = []
+        if r['Risk_Score'] > df['Risk_Score'].median():
+            risk_flags.append("Risk level above portfolio median")
+        if r['ESG_Score'] < df['ESG_Score'].median():
+            risk_flags.append("Below-median ESG alignment")
+        if r['PI'] < 1.0:
+            risk_flags.append("Value creation below invested capital")
+
+        if risk_flags:
+            for f in risk_flags:
+                st.markdown(f"- {f}")
+        else:
+            st.markdown("- No material red flags relative to portfolio")
+
+        # ============================================================
+        # 5. DECISION SIGNAL (AUTOMATIC)
+        # ============================================================
+
+        st.markdown("### Investment Committee Signal")
+
+        if r['PI'] >= 1.2 and r['Risk_Score'] <= df['Risk_Score'].median():
+            decision = "APPROVE"
+        elif r['PI'] >= 1.0:
+            decision = "APPROVE WITH CONDITIONS"
+        else:
+            decision = "DEFER OR RESTRUCTURE"
+
+        st.markdown(f"**Recommended Decision:** {decision}")
+
+        # ============================================================
+        # 6. AI INSTITUTIONAL THESIS (STRUCTURED PROMPT)
+        # ============================================================
+
+        if st.button("Generate Institutional Thesis"):
+            with st.spinner("Generating institutional thesis..."):
                 try:
                     model = genai.GenerativeModel("gemini-1.5-flash")
-                    res = model.generate_content(f"Deep Quant analysis for project {target}. Strategic Value ${r['Strategic_Value']:.2f}, Profitability Index {r['PI']:.2f}, Risk Score {r['Risk_Score']:.1f}. Provide a professional investment thesis.")
-                    st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
-                except: st.error("AI rate limit. Wait 60s.")
+                    res = model.generate_content(
+                        f"""
+                        Write an institutional investment thesis for project {target}:
 
-    st.markdown("---")
-    st.download_button(" DOWNLOAD (CSV)", selected.to_csv(index=False), file_name="STRATOS_Approved_Portfolio.csv", mime="text/csv")
+                        - Capital required: {r['Investment_Capital']:,.0f}
+                        - Strategic value: {r['Strategic_Value']:,.0f}
+                        - Predicted ROI: {r['Pred_ROI']:.2f}%
+                        - Profitability index: {r['PI']:.2f}
+                        - Risk score: {r['Risk_Score']:.1f}
+                        - ESG score: {r['ESG_Score']:.2f}
+                        - Capital staging: Phase 1 {r['Phase_1_Cap']:.0%}, Phase 2 {r['Phase_2_Cap']:.0%}
+
+                        Structure the output as:
+                        1. Investment rationale
+                        2. Value creation drivers
+                        3. Key risks and mitigations
+                        4. Capital deployment logic
+                        5. Final recommendation
+
+                        Use professional IC language.
+                        """
+                    )
+                    st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
+                except:
+                    st.warning("AI temporarily unavailable. Please retry.")
 
 if __name__ == "__main__":
     main()
