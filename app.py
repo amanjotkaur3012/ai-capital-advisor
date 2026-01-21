@@ -249,41 +249,6 @@ def run_optimization(df, budget, esg_hurdle):
    # except Exception:
       #  return "#da3633", "OFFLINE"    # Institutional Red
 
-# --- STEP 1: ADD CACHING TO THE FUNCTION ---
-@st.cache_data(ttl=3600) # This remembers the result for 1 hour
-def check_api_status():
-    """Verifies connection to Gemini API once per hour to save quota."""
-    try:
-        # Use the standard 2026 stable identifier
-        model = genai.GenerativeModel("models/gemini-3-flash-preview")
-        model.generate_content("ping", generation_config={"max_output_tokens": 1})
-        return "#238636", "CONNECTED"
-    except Exception:
-        return "#da3633", "OFFLINE"
-
-# --- STEP 2: UPDATE THE CALL IN MAIN() ---
-def main():
-    with st.sidebar:
-        # ... (other sidebar code) ...
-
-        st.markdown("---")
-        # Wrapped in a container to prevent layout shifting
-        status_container = st.empty() 
-        try:
-            # This now pulls from memory instead of calling the API every time
-            color, status_text = check_api_status() 
-            status_container.markdown(f"""
-                <div style="display: flex; align-items: center; gap: 10px; padding: 10px; 
-                            background: #161b22; border-radius: 8px; border: 1px solid #30363d;">
-                    <div style="width: 12px; height: 12px; background-color: {color}; 
-                                border-radius: 50%; box-shadow: 0 0 8px {color};"></div>
-                    <span style="color: #ffffff; font-size: 14px; font-weight: 600; 
-                                  letter-spacing: 0.5px;">API STATUS: {status_text}</span>
-                </div>
-            """, unsafe_allow_html=True)
-        except:
-            status_container.error("Status check failed.")
-
 
 from fpdf import FPDF
 
