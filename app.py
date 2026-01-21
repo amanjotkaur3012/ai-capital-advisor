@@ -119,6 +119,48 @@ def run_optimization(df, budget, esg_hurdle):
     df['Selected'] = [pulp.value(xs[i]) for i in df.index]
     return df
 
+from fpdf import FPDF
+
+def generate_pdf(selected_df, total_cap, total_val, avg_esg):
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # Title
+    pdf.set_font("Arial", 'B', 20)
+    pdf.set_text_color(88, 166, 255) # Stratos Blue
+    pdf.cell(0, 20, "STRATOS QUANT | Executive Report", ln=True, align='C')
+    
+    # Portfolio Highlights
+    pdf.set_font("Arial", 'B', 14)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(0, 10, "1. Portfolio Highlights", ln=True)
+    pdf.set_font("Arial", '', 12)
+    pdf.cell(0, 8, f"Total Deployed Capital: ${total_cap:,.0f}", ln=True)
+    pdf.cell(0, 8, f"Total Strategic Value: ${total_val:,.0f}", ln=True)
+    pdf.cell(0, 8, f"Portfolio ESG Score: {avg_esg:.2f}/10", ln=True)
+    pdf.ln(10)
+    
+    # Project Table Header
+    pdf.set_font("Arial", 'B', 10)
+    pdf.set_fill_color(22, 27, 34)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(30, 10, "ID", 1, 0, 'C', True)
+    pdf.cell(60, 10, "Department", 1, 0, 'C', True)
+    pdf.cell(45, 10, "Capital", 1, 0, 'C', True)
+    pdf.cell(45, 10, "ROI (%)", 1, 1, 'C', True)
+    
+    # Project Table Rows
+    pdf.set_font("Arial", '', 10)
+    pdf.set_text_color(0, 0, 0)
+    for index, row in selected_df.iterrows():
+        pdf.cell(30, 10, str(row['Project_ID']), 1)
+        pdf.cell(60, 10, str(row['Department']), 1)
+        pdf.cell(45, 10, f"${row['Investment_Capital']:,.0f}", 1)
+        pdf.cell(45, 10, f"{row['Pred_ROI']:.2f}%", 1)
+        pdf.ln(0)
+        
+    return pdf.output(dest='S').encode('latin-1')
+
 # ----------------------------------------------------
 # 2. APPLICATION EXECUTION
 # ----------------------------------------------------
