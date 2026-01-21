@@ -187,32 +187,24 @@ st.markdown("""
         color: #8b949e !important;
     }
     
-    /* FIX METRIC LABEL VISIBILITY (VaR, Sharpe, etc.) */
-    div[data-testid="stMetricLabel"] {
+    /* HIGH-STAKES VISIBILITY FOR METRIC LABELS */
+    div[data-testid="stMetricLabel"] > div > p {
         color: #ffffff !important;
-        opacity: 0.9 !important;
         font-weight: 700 !important;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    /* Target the text inside the label specifically for high-contrast */
-    div[data-testid="stMetricLabel"] p {
-        color: #ffffff !important;
         font-size: 16px !important;
+        opacity: 1 !important;
     }
 
-    /* Ensure Metric Values are stark white and large */
+    /* Ensure the Value (the numbers) also stays bright white */
     div[data-testid="stMetricValue"] {
         color: #ffffff !important;
-        font-weight: 800 !important;
     }
 
-    /* Add a subtle highlight to the metric cards for depth */
+    /* Optional: Add a subtle glow to the card border for better definition */
     div[data-testid="stMetric"] {
-        background: #161b22 !important;
         border: 1px solid #30363d !important;
-        border-radius: 8px !important;
+        background-color: #161b22 !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     }
     
 
