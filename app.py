@@ -634,9 +634,9 @@ def main():
             <div style="background: rgba(88, 166, 255, 0.05); padding: 20px; border-radius: 8px; border: 1px solid #30363d;">
             <p style='color:#58a6ff; font-weight:700; margin-bottom:10px;'>ESG QUALITY SIGNALS</p>
             <ul style='list-style-type: none; padding-left: 0;'>
-               <li>💎 Strongest relative pillar: <b>{best_pillar.replace('_',' ')}</b></li>
-               <li>⚠️ Weakest relative pillar: <b>{worst_pillar.replace('_',' ')}</b></li>
-               <li>📈 Net ESG premium vs universe: <b>{gap.mean():+.2f}</b></li>
+               <li> Strongest relative pillar: <b>{best_pillar.replace('_',' ')}</b></li>
+               <li> Weakest relative pillar: <b>{worst_pillar.replace('_',' ')}</b></li>
+               <li> Net ESG premium vs universe: <b>{gap.mean():+.2f}</b></li>
             </ul>
             </div>
             """,
@@ -662,10 +662,10 @@ def main():
             <div style="background: rgba(16, 185, 129, 0.05); padding: 20px; border-radius: 8px; border: 1px solid #238636; margin: 20px 0;">
             <p style='color:#10b981; font-weight:700; margin-bottom:10px;'>MODEL ANALYTICS</p>
             <ul style='list-style-type: none; padding-left: 0; color: #f0f6fc;'>
-                <li>🎯 Primary ROI Driver: <b>{top_driver.replace('_',' ')}</b></li>
-                <li>📊 Average ESG Score: <b>{avg_esg_val:.2f}</b></li>
-                <li>⚖️ ESG Dispersion: <b>{imbalance:.2f}</b></li>
-                <li>📡 Model Status: <b>{model_signal}</b></li>
+                <li> Primary ROI Driver: <b>{top_driver.replace('_',' ')}</b></li>
+                <li> Average ESG Score: <b>{avg_esg_val:.2f}</b></li>
+                <li> ESG Dispersion: <b>{imbalance:.2f}</b></li>
+                <li> Model Status: <b>{model_signal}</b></li>
             </ul>
             </div>
             """,
@@ -900,8 +900,8 @@ def main():
 
         if not esg_possible:
             st.warning(
-                "⚠️ **ESG Strict scenario is infeasible** under current budget. "
-                "The project pool cannot meet a 9.0 ESG average within this capital limit."
+                " **ESG Strict scenario is infeasible** under current budget. "
+                "The project pool cannot meet the required {esg_min} ESG average within this capital limit."
             )
 
         # Determine the best scenario based on math
