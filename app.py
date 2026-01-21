@@ -124,41 +124,34 @@ from fpdf import FPDF
 def generate_pdf(selected_df, total_cap, total_val, avg_esg):
     pdf = FPDF()
     pdf.add_page()
-    
-    # Title
     pdf.set_font("Arial", 'B', 20)
-    pdf.set_text_color(88, 166, 255) # Stratos Blue
+    pdf.set_text_color(88, 166, 255)
     pdf.cell(0, 20, "STRATOS QUANT | Executive Report", ln=True, align='C')
     
-    # Portfolio Highlights
     pdf.set_font("Arial", 'B', 14)
     pdf.set_text_color(0, 0, 0)
-    pdf.cell(0, 10, "1. Portfolio Highlights", ln=True)
+    pdf.cell(0, 10, "Portfolio Highlights", ln=True)
     pdf.set_font("Arial", '', 12)
-    pdf.cell(0, 8, f"Total Deployed Capital: ${total_cap:,.0f}", ln=True)
-    pdf.cell(0, 8, f"Total Strategic Value: ${total_val:,.0f}", ln=True)
-    pdf.cell(0, 8, f"Portfolio ESG Score: {avg_esg:.2f}/10", ln=True)
+    pdf.cell(0, 8, f"Capital Deployed: ${total_cap:,.0f}", ln=True)
+    pdf.cell(0, 8, f"Strategic Value: ${total_val:,.0f}", ln=True)
+    pdf.cell(0, 8, f"Avg ESG Score: {avg_esg:.2f}", ln=True)
     pdf.ln(10)
     
-    # Project Table Header
+    # Simple Table
     pdf.set_font("Arial", 'B', 10)
-    pdf.set_fill_color(22, 27, 34)
-    pdf.set_text_color(255, 255, 255)
-    pdf.cell(30, 10, "ID", 1, 0, 'C', True)
-    pdf.cell(60, 10, "Department", 1, 0, 'C', True)
-    pdf.cell(45, 10, "Capital", 1, 0, 'C', True)
-    pdf.cell(45, 10, "ROI (%)", 1, 1, 'C', True)
+    pdf.cell(40, 10, "Project ID", 1)
+    pdf.cell(60, 10, "Department", 1)
+    pdf.cell(40, 10, "Capital", 1)
+    pdf.cell(40, 10, "ROI %", 1)
+    pdf.ln()
     
-    # Project Table Rows
     pdf.set_font("Arial", '', 10)
-    pdf.set_text_color(0, 0, 0)
-    for index, row in selected_df.iterrows():
-        pdf.cell(30, 10, str(row['Project_ID']), 1)
-        pdf.cell(60, 10, str(row['Department']), 1)
-        pdf.cell(45, 10, f"${row['Investment_Capital']:,.0f}", 1)
-        pdf.cell(45, 10, f"{row['Pred_ROI']:.2f}%", 1)
-        pdf.ln(0)
-        
+    for i, r in selected_df.iterrows():
+        pdf.cell(40, 10, str(r['Project_ID']), 1)
+        pdf.cell(60, 10, str(r['Department']), 1)
+        pdf.cell(40, 10, f"${r['Investment_Capital']:,.0f}", 1)
+        pdf.cell(40, 10, f"{r['Pred_ROI']:.1f}%", 1)
+        pdf.ln()
     return pdf.output(dest='S').encode('latin-1')
 
 # ----------------------------------------------------
@@ -197,6 +190,15 @@ def main():
                 file_name="STRATOS_Executive_Summary.pdf",
                 mime="application/pdf"
             )
+        st.markdown("---")
+        st.header("EXECUTIVE REPORTING")
+        if st.button("PREPARE PDF SUMMARY"):
+            t_cap = selected['Investment_Capital'].sum()
+            t_val = selected['Strategic_Value'].sum()
+            a_esg = selected['ESG_Score'].mean()
+            pdf_data = generate_pdf(selected, t_cap, t_val, a_esg)
+            st.download_button("📥 DOWNLOAD PDF", data=pdf_data, file_name="STRATOS_Report.pdf", mime="application/pdf")
+            
 
     # Dataset Setup
     if up_file:
@@ -308,26 +310,16 @@ def main():
         # 5. AI INTERPRETATION
         # ============================================================
 
-        if st.button("Interpret Summary"):
-            with st.spinner("AI analyzing portfolio..."):
+        if st.button("Interpret Summary", key="btn_sum"):
+            with st.status("AI Analyzing Balance Sheet...", expanded=True) as status:
                 try:
                     model = genai.GenerativeModel("gemini-1.5-flash")
-                    res = model.generate_content(
-                        f"""
-                        Provide an executive summary of portfolio performance:
-
-                        - Capital deployed: {total_capital:,.0f}
-                        - Strategic value created: {total_value:,.0f}
-                        - Portfolio efficiency: {efficiency:.2f}x
-                        - Average ESG score: {avg_esg:.2f}
-                        - Capital concentration (top 3): {top3_share:.0%}
-
-                        Focus on value creation quality, capital discipline, and governance considerations.
-                        """
-                    )
-                    st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
-                except:
-                    st.warning("AI temporarily unavailable. Please retry.")
+                    prompt = f"Act as a CFO. Portfolio summary: Budget ${total_capital:,.0f}, Strategic Value ${total_value:,.0f}, ESG {avg_esg:.1f}. Analyze the wealth creation quality."
+                    response = model.generate_content(prompt)
+                    st.markdown(f"<div class='ai-insight-box'>{response.text}</div>", unsafe_allow_html=True)
+                    status.update(label="Analysis Complete", state="complete")
+                except Exception as e:
+                    st.error(f"API Error: {str(e)}")
 
     elif nav == " ML INTELLIGENCE":
 
@@ -443,25 +435,16 @@ def main():
         # 5. AI INTERPRETATION
         # ============================================================
 
-        if st.button("Interpret ML Intelligence"):
-            with st.spinner("Interpreting model outputs..."):
+        if st.button("Interpret ML Intelligence", key="btn_ml"):
+            with st.status("AI Decoding Predictive Logic...", expanded=True) as status:
                 try:
                     model = genai.GenerativeModel("gemini-1.5-flash")
-                    res = model.generate_content(
-                        f"""
-                        Explain the ML intelligence layer to an investment committee:
-
-                        - Primary ROI driver: {top_driver}
-                        - Average ESG score of selected projects: {avg_esg:.2f}
-                        - ESG pillar dispersion: {imbalance:.2f}
-                        - Model separates value and ESG trade-offs visually
-
-                        Focus on model reliability, decision confidence, and limitations.
-                        """
-                    )
-                    st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
-                except:
-                    st.warning("AI temporarily unavailable. Please retry.")
+                    prompt = f"Explain to a Board of Directors: The main ROI driver is {top_driver}. The portfolio ESG score is {avg_esg:.2f} with a dispersion of {imbalance:.2f}. Is the model picking high-quality projects?"
+                    response = model.generate_content(prompt)
+                    st.markdown(f"<div class='ai-insight-box'>{response.text}</div>", unsafe_allow_html=True)
+                    status.update(label="ML Insight Ready", state="complete")
+                except Exception as e:
+                    st.error(f"API Error: {str(e)}")
 
 
     elif nav == " SENSITIVITY":
@@ -670,27 +653,30 @@ def main():
         )
 
         # ============================================================
-        # 7. AI INTERPRETATION
+        # 7. AI INTERPRETATION (REFINED FOR API STABILITY)
         # ============================================================
 
-        if st.button("Interpret Sensitivity"):
-            with st.spinner("Analyzing trade-offs..."):
+        if st.button("Interpret Sensitivity", key="btn_sensitivity"):
+            with st.status("AI Analyzing Value Trade-offs...", expanded=True) as status:
                 try:
                     model = genai.GenerativeModel("gemini-1.5-flash")
-                    res = model.generate_content(
-                        f"""
-                        Explain this sensitivity analysis to a CFO:
-                        - Optimal budget/ESG zone: {opt_budget} / {opt_esg}
-                        - Best scenario: {best_scenario}
-                        - Liquidity stress ratio: {stress_ratio:.2f}
-                        - Executive recommendation: {rec}
+                    # Constructing a data-rich prompt for the CFO persona
+                    prompt = f"""
+                    Act as a Strategic Finance Advisor. Analyze this capital allocation sensitivity:
+                    - Optimal Value Zone: Budget {opt_budget} at ESG Hurdle {opt_esg}.
+                    - Strategy Scenario: {best_scenario} provides the highest mean value.
+                    - Liquidity Pressure: Stress ratio is {stress_ratio:.2f}.
+                    - Recommendation: {rec}.
 
-                        Focus on capital safety, flexibility, and strategic trade-offs.
-                        """
-                    )
-                    st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
-                except:
-                    st.warning("AI cooling down.")
+                    Explain how changing the budget or sustainability constraints shifts 
+                    the portfolio's strategic value and where the 'Value Cliff' poses a risk.
+                    """
+                    
+                    response = model.generate_content(prompt)
+                    st.markdown(f"<div class='ai-insight-box'>{response.text}</div>", unsafe_allow_html=True)
+                    status.update(label="Sensitivity Analysis Complete", state="complete")
+                except Exception as e:
+                    st.error(f"API Error: {str(e)}")
 
     elif nav == " RISK MANAGEMENT":
 
@@ -812,27 +798,16 @@ def main():
         # 4. AI INTERPRETATION (PRESERVED, IMPROVED PROMPT)
         # ============================================================
 
-        if st.button("Interpret Risk Exposure"):
-            with st.spinner("Analyzing portfolio risk..."):
+        if st.button("Interpret Risk Exposure", key="btn_risk"):
+            with st.status("AI Stress-Testing Portfolio...", expanded=True) as status:
                 try:
                     model = genai.GenerativeModel("gemini-1.5-flash")
-                    res = model.generate_content(
-                        f"""
-                        Provide a professional risk assessment for a CFO:
-
-                        - Core project share: {core_pct:.1f}%
-                        - Exit candidate share: {exit_pct:.1f}%
-                        - Value at Risk (95%): {abs(var95):.2%}
-                        - Average Sharpe Ratio: {sharpe_avg:.2f}
-                        - Risk quality: {risk_quality}
-                        - Recommended action: {action}
-
-                        Focus on capital protection, stability, and governance implications.
-                        """
-                    )
-                    st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
-                except:
-                    st.warning("AI temporarily unavailable. Please retry.")
+                    prompt = f"Analyze for a CFO: Core Projects {core_pct:.1f}%, Exit Candidates {exit_pct:.1f}%, VaR {abs(var95):.2%}, Sharpe {sharpe_avg:.2f}. Risk Quality is {risk_quality}. Recommendation: {action}."
+                    response = model.generate_content(prompt)
+                    st.markdown(f"<div class='ai-insight-box'>{response.text}</div>", unsafe_allow_html=True)
+                    status.update(label="Risk Assessment Generated", state="complete")
+                except Exception as e:
+                    st.error(f"API Error: {str(e)}")
 
     
     elif nav == " INSTITUTIONAL THESIS":
