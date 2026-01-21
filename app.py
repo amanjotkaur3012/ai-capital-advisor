@@ -68,6 +68,34 @@ st.markdown("""
         border-color: #58a6ff;
         background-color: #0d1117;
     }
+    section[data-testid="stSidebar"] { 
+        background-color: #010409 !important; 
+        border-right: 2px solid #30363d; 
+    }
+
+    /* Normal buttons */
+    .stButton > button {
+        color: #58a6ff !important;
+        font-weight: 600;
+        background-color: #21262d;
+        border: 1px solid #30363d;
+    }
+
+    /* Download buttons */
+    .stDownloadButton > button {
+        color: #58a6ff !important;
+        font-weight: 600;
+        background-color: #21262d;
+        border: 1px solid #30363d;
+    }
+
+    /* Hover effects for both */
+    .stButton > button:hover,
+    .stDownloadButton > button:hover {
+        color: #58a6ff !important;
+        background-color: #30363d;
+        border-color: #8b949e;
+    }
     </style>
 """, unsafe_allow_html=True)
 
