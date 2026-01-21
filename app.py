@@ -900,7 +900,8 @@ def main():
 
         if not esg_possible:
             st.warning(
-                " **ESG Strict scenario is infeasible** under current budget. The project pool cannot meet the required {esg_min} ESG average within this capital limit."
+                f" **ESG Strict scenario is infeasible** under current budget. "
+                f"The project pool cannot meet the required **{esg_min:.1f} ESG average** within this capital limit."
             )
 
         # Determine the best scenario based on math
