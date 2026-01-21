@@ -303,7 +303,7 @@ def main():
             with st.status("AI Analyzing Balance Sheet...", expanded=True) as status:
                 try:
                     # UPDATED MODEL NAME STRING
-                    model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
+                    model = genai.GenerativeModel(model_name="models/gemini-2.0-flash")
                     
                     prompt = f"Act as a CFO. Portfolio summary: Budget ${total_capital:,.0f}, Strategic Value ${total_value:,.0f}, ESG {avg_esg:.1f}. Analyze the wealth creation quality."
                     response = model.generate_content(prompt)
@@ -429,7 +429,7 @@ def main():
         if st.button("Interpret ML Intelligence", key="btn_ml"):
             with st.status("AI Decoding Predictive Logic...", expanded=True) as status:
                 try:
-                    model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
+                    model = genai.GenerativeModel(model_name="models/gemini-2.0-flash")
                     prompt = f"Explain to a Board of Directors: The main ROI driver is {top_driver}. The portfolio ESG score is {avg_esg:.2f} with a dispersion of {imbalance:.2f}. Is the model picking high-quality projects?"
                     response = model.generate_content(prompt)
                     st.markdown(f"<div class='ai-insight-box'>{response.text}</div>", unsafe_allow_html=True)
@@ -650,7 +650,7 @@ def main():
         if st.button("Interpret Sensitivity", key="btn_sensitivity"):
             with st.status("AI Analyzing Value Trade-offs...", expanded=True) as status:
                 try:
-                    model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
+                    model = genai.GenerativeModel(model_name="models/gemini-2.0-flash")
                     prompt = f"""
                     Act as a Strategic Finance Advisor. Analyze this capital allocation sensitivity:
                     - Optimal Value Zone: Budget {opt_budget} at ESG Hurdle {opt_esg}.
@@ -894,7 +894,7 @@ def main():
         if st.button("Generate Institutional Thesis", key="btn_thesis"):
             with st.status("AI Generating Investment Memorandum...", expanded=True) as status:
                 try:
-                    model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
+                    model = genai.GenerativeModel(model_name="models/gemini-2.0-flash")
                     prompt = f"""
                     Write an institutional investment thesis for project {target}:
                     - Capital: {r['Investment_Capital']:,.0f}, PI: {r['PI']:.2f}, Risk: {r['Risk_Score']:.1f}, ESG: {r['ESG_Score']:.2f}.
