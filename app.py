@@ -570,9 +570,7 @@ def main():
 
             st.plotly_chart(fig_eff, use_container_width=True)
 
-        # ============================================================
-        # 3. ESG PILLAR BALANCE (MODEL QUALITY CHECK)
-        # ============================================================
+        
 
         # ============================================================
         # 3. ESG PILLAR BALANCE (SELECTED vs UNIVERSE BENCHMARK)
@@ -671,10 +669,20 @@ def main():
         if st.button("Interpret ML Intelligence", key="btn_ml"):
             with st.status("AI Decoding Predictive Logic...", expanded=True) as status:
                 try:
+                    # Use the 2026 stable identifier
                     model = genai.GenerativeModel(model_name="models/gemini-3-flash-preview")
+                    
                     prompt = f"Explain to a Board of Directors: The main ROI driver is {top_driver}. The portfolio ESG score is {avg_esg:.2f} with a dispersion of {imbalance:.2f}. Is the model picking high-quality projects?"
-                    response = model.generate_content(prompt)
-                    st.markdown(f"<div class='ai-insight-box'>{response.text}</div>", unsafe_allow_html=True)
+                    
+                    # 1. ADD SAFETY CONFIG HERE
+                    response = model.generate_content(prompt, safety_settings=safety_config)
+                    
+                    # 2. ADD PART VALIDATION HERE
+                    if response.candidates and len(response.candidates[0].content.parts) > 0:
+                        st.markdown(f"<div class='ai-insight-box'>{response.text}</div>", unsafe_allow_html=True)
+                    else:
+                        st.warning("The ML analysis was blocked by safety filters. This usually happens with high-risk scores.")
+                    
                     status.update(label="ML Insight Ready", state="complete")
                 except Exception as e:
                     st.error(f"API Error: {str(e)}")
