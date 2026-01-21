@@ -840,12 +840,13 @@ def main():
                 " **Stable Capital Profile:** No abnormal liquidity stress detected."
             )
 
-        # ============================================================
-        # 5. SCENARIO NARRATIVES
+       # ============================================================
+        # 5. SCENARIO NARRATIVES (ROBUST & EXECUTIVE READY)
         # ============================================================
 
         st.markdown('<div class="section-header">SCENARIO NARRATIVES</div>', unsafe_allow_html=True)
 
+        # 1. Extract data from the Sensitivity Map (h_df)
         scenarios = {
             "Growth First": h_df.iloc[:, 0].mean(),
             "Balanced Strategy": h_df.iloc[:, 2].mean(),
@@ -856,28 +857,65 @@ def main():
             scenarios, orient="index", columns=["Portfolio Value"]
         ).reset_index()
 
+        # 2. Feasibility Logic: Prevents empty bars/crashes in the UI
+        sc_df["Feasible"] = sc_df["Portfolio Value"] > 0
+        # Replace 0 with NaN so Plotly doesn't try to draw a ghost bar
+        sc_df["Display Value"] = sc_df["Portfolio Value"].replace(0, np.nan)
+
+        # 3. Build the Strategic Bar Chart
         fig_sc = px.bar(
             sc_df,
             x="index",
-            y="Portfolio Value",
-            text="Portfolio Value",
-            title="Strategy Outcomes Under Board Mandates"
+            y="Display Value",
+            text=sc_df["Portfolio Value"].apply(lambda x: "INFEASIBLE" if x == 0 else f"${x:,.0f}"),
+            title="Portfolio Value Outcomes Under Board Mandates",
+            color="Feasible",
+            color_discrete_map={
+                True: "#58a6ff",  # Your Institutional Blue
+                False: "#30363d"  # Your Institutional Grey
+            }
         )
 
         fig_sc.update_layout(
             xaxis_title="Strategy Type",
             yaxis_title="Total Strategic Value ($)",
-            title_font_size=18
+            title_font_size=18,
+            showlegend=False,
+            template="plotly_dark",
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            uniformtext_mode='hide', 
+            uniformtext_minsize=12,
+            yaxis=dict(showgrid=True, gridcolor="#30363d")
         )
+
+        # Labels sitting professionally outside the bars
+        fig_sc.update_traces(textposition='outside')
 
         st.plotly_chart(fig_sc, use_container_width=True)
 
+        # 4. DATA-DRIVEN INTERPRETATION
+        # Check specifically if the ESG scenario is possible with current constraints
+        esg_possible = sc_df.loc[sc_df["index"] == "ESG Strict", "Feasible"].iloc[0]
+
+        if not esg_possible:
+            st.warning(
+                "⚠️ **ESG Strict scenario is infeasible** under current budget. "
+                "The project pool cannot meet a 9.0 ESG average within this capital limit."
+            )
+
+        # Determine the best scenario based on math
         best_scenario = sc_df.sort_values("Portfolio Value", ascending=False).iloc[0]["index"]
 
-        st.caption(
-            f" **Board Insight:** The **{best_scenario}** mandate maximizes portfolio value under current conditions."
+        st.markdown(
+            f"""
+            <div style="background: rgba(88, 166, 255, 0.05); padding: 15px; border-radius: 8px; border: 1px solid #30363d; margin-top: 10px;">
+                <span style="color:#58a6ff; font-weight:800;">BOARD INSIGHT:</span> 
+                The <b style="color:#ffffff;">{best_scenario}</b> mandate maximizes portfolio value under current conditions.
+            </div>
+            """, 
+            unsafe_allow_html=True
         )
-
         # ============================================================
         # 6. EXECUTIVE RECOMMENDATION
         # ============================================================
