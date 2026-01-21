@@ -401,7 +401,10 @@ def main():
             + 11 
             + np.random.normal(0, 1.5, 25)
         )
-
+        
+    if df is None:
+    st.info("Upload a proposals CSV or click **Calculate using demo data** to begin analysis.")
+    st.stop()
 
     
     # 2. Machine Learning Calculation Layers
@@ -426,10 +429,6 @@ def main():
 
     df = run_optimization(df, budget, esg_min)
     selected = df[df['Selected'] == 1]
-
-    if df is None:
-    st.info("Upload a proposals CSV or click **Calculate using demo data** to begin analysis.")
-    st.stop()
 
     # TOP BRANDING
     st.markdown('<p class="main-title">STRATOS | Capital Allocation Advisor</p>', unsafe_allow_html=True)
