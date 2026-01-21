@@ -180,6 +180,23 @@ def main():
         rf_rate = st.slider("Risk-Free Rate (%)", 0.0, 8.0, 4.2) / 100
         budget = st.number_input("Capital Constraint ($)", value=5500000, step=500000)
         esg_min = st.slider("Sustainability Hurdle (ESG)", 1, 10, 6)
+        
+        st.markdown("---")
+        st.header("EXECUTIVE REPORTING")
+        if st.button("PREPARE PDF SUMMARY"):
+            # Calculate values needed for report
+            t_cap = selected['Investment_Capital'].sum()
+            t_val = selected['Strategic_Value'].sum()
+            a_esg = selected['ESG_Score'].mean()
+            
+            pdf_data = generate_pdf(selected, t_cap, t_val, a_esg)
+            
+            st.download_button(
+                label="📥 DOWNLOAD EXECUTIVE PDF",
+                data=pdf_data,
+                file_name="STRATOS_Executive_Summary.pdf",
+                mime="application/pdf"
+            )
 
     # Dataset Setup
     if up_file:
