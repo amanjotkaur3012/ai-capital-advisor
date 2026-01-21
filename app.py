@@ -174,24 +174,19 @@ def main():
         budget = st.number_input("Capital Constraint ($)", value=5500000, step=500000)
         esg_min = st.slider("Sustainability Hurdle (ESG)", 1, 10, 6)
         
-        # PLACE THIS AT THE VERY END OF YOUR 'with st.sidebar:' BLOCK
         st.markdown("---")
         st.header("EXECUTIVE REPORTING")
-        
-        # We add key="sidebar_pdf" to prevent the Duplicate ID error
-        if st.button("PREPARE PDF SUMMARY", key="sidebar_pdf"):
+        if st.button("PREPARE PDF SUMMARY", key="sidebar_pdf_trigger"):
             t_cap = selected['Investment_Capital'].sum()
             t_val = selected['Strategic_Value'].sum()
             a_esg = selected['ESG_Score'].mean()
-            
             pdf_data = generate_pdf(selected, t_cap, t_val, a_esg)
-            
             st.download_button(
                 label="📥 DOWNLOAD EXECUTIVE PDF",
                 data=pdf_data,
-                file_name="STRATOS_Executive_Summary.pdf",
+                file_name="STRATOS_Report.pdf",
                 mime="application/pdf",
-                key="sidebar_download" # Unique key for the download button too
+                key="sidebar_pdf_download"
             )
 
     # Dataset Setup
@@ -307,7 +302,9 @@ def main():
         if st.button("Interpret Summary", key="btn_sum"):
             with st.status("AI Analyzing Balance Sheet...", expanded=True) as status:
                 try:
-                    model = genai.GenerativeModel("gemini-1.5-flash")
+                    # UPDATED MODEL NAME STRING
+                    model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
+                    
                     prompt = f"Act as a CFO. Portfolio summary: Budget ${total_capital:,.0f}, Strategic Value ${total_value:,.0f}, ESG {avg_esg:.1f}. Analyze the wealth creation quality."
                     response = model.generate_content(prompt)
                     st.markdown(f"<div class='ai-insight-box'>{response.text}</div>", unsafe_allow_html=True)
@@ -432,7 +429,7 @@ def main():
         if st.button("Interpret ML Intelligence", key="btn_ml"):
             with st.status("AI Decoding Predictive Logic...", expanded=True) as status:
                 try:
-                    model = genai.GenerativeModel("gemini-1.5-flash")
+                    model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
                     prompt = f"Explain to a Board of Directors: The main ROI driver is {top_driver}. The portfolio ESG score is {avg_esg:.2f} with a dispersion of {imbalance:.2f}. Is the model picking high-quality projects?"
                     response = model.generate_content(prompt)
                     st.markdown(f"<div class='ai-insight-box'>{response.text}</div>", unsafe_allow_html=True)
@@ -653,19 +650,15 @@ def main():
         if st.button("Interpret Sensitivity", key="btn_sensitivity"):
             with st.status("AI Analyzing Value Trade-offs...", expanded=True) as status:
                 try:
-                    model = genai.GenerativeModel("gemini-1.5-flash")
-                    # Constructing a data-rich prompt for the CFO persona
+                    model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
                     prompt = f"""
                     Act as a Strategic Finance Advisor. Analyze this capital allocation sensitivity:
                     - Optimal Value Zone: Budget {opt_budget} at ESG Hurdle {opt_esg}.
                     - Strategy Scenario: {best_scenario} provides the highest mean value.
                     - Liquidity Pressure: Stress ratio is {stress_ratio:.2f}.
                     - Recommendation: {rec}.
-
-                    Explain how changing the budget or sustainability constraints shifts 
-                    the portfolio's strategic value and where the 'Value Cliff' poses a risk.
+                    Explain where the 'Value Cliff' poses a risk.
                     """
-                    
                     response = model.generate_content(prompt)
                     st.markdown(f"<div class='ai-insight-box'>{response.text}</div>", unsafe_allow_html=True)
                     status.update(label="Sensitivity Analysis Complete", state="complete")
@@ -795,7 +788,7 @@ def main():
         if st.button("Interpret Risk Exposure", key="btn_risk"):
             with st.status("AI Stress-Testing Portfolio...", expanded=True) as status:
                 try:
-                    model = genai.GenerativeModel("gemini-1.5-flash")
+                    model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
                     prompt = f"Analyze for a CFO: Core Projects {core_pct:.1f}%, Exit Candidates {exit_pct:.1f}%, VaR {abs(var95):.2%}, Sharpe {sharpe_avg:.2f}. Risk Quality is {risk_quality}. Recommendation: {action}."
                     response = model.generate_content(prompt)
                     st.markdown(f"<div class='ai-insight-box'>{response.text}</div>", unsafe_allow_html=True)
@@ -898,18 +891,20 @@ def main():
         # 6. AI INSTITUTIONAL THESIS (STRUCTURED PROMPT)
         # ============================================================
 
-        # REPLACE THE OLD BUTTON BLOCK IN THE THESIS SECTION WITH THIS:
         if st.button("Generate Institutional Thesis", key="btn_thesis"):
             with st.status("AI Generating Investment Memorandum...", expanded=True) as status:
                 try:
-                    model = genai.GenerativeModel("gemini-1.5-flash")
-                    # ... (your existing prompt code remains the same) ...
-                    res = model.generate_content(f"Write an institutional investment thesis for project {target}...") 
-                    
-                    st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
+                    model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
+                    prompt = f"""
+                    Write an institutional investment thesis for project {target}:
+                    - Capital: {r['Investment_Capital']:,.0f}, PI: {r['PI']:.2f}, Risk: {r['Risk_Score']:.1f}, ESG: {r['ESG_Score']:.2f}.
+                    Structure as: rationale, value drivers, risks, and recommendation.
+                    """
+                    response = model.generate_content(prompt)
+                    st.markdown(f"<div class='ai-insight-box'>{response.text}</div>", unsafe_allow_html=True)
                     status.update(label="Thesis Generated", state="complete")
                 except Exception as e:
-                    st.error(f"AI Error: {str(e)}")
+                    st.error(f"Thesis API Error: {str(e)}")
 
 if __name__ == "__main__":
     main()
