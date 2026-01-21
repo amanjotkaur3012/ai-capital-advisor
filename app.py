@@ -401,6 +401,11 @@ def main():
     )
 
 
+    if df is None:
+    st.info("Upload a proposals CSV or click **Calculate using demo data** to begin analysis.")
+    st.stop()
+
+    
     # 2. Machine Learning Calculation Layers
     feats = ['Investment_Capital', 'Risk_Score', 'ESG_Score', 'Volatility', 'Strategic_Alignment']
     
