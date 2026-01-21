@@ -239,6 +239,17 @@ def run_optimization(df, budget, esg_hurdle):
     df['Selected'] = [pulp.value(xs[i]) for i in df.index]
     return df
 
+def check_api_status():
+    """Verifies connection to Gemini API and returns status color."""
+    try:
+        # Using the lite model to save quota for the presentation
+        model = genai.GenerativeModel(model_name="models/gemini-2.0-flash-lite")
+        model.generate_content("ping", generation_config={"max_output_tokens": 1})
+        return "#238636", "CONNECTED"  # Institutional Green
+    except Exception:
+        return "#da3633", "OFFLINE"    # Institutional Red
+    
+
 from fpdf import FPDF
 
 def generate_pdf(selected_df, total_cap, total_val, avg_esg):
