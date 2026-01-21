@@ -101,33 +101,56 @@ st.markdown("""
     section[data-testid="stSidebar"] {
         color: #ffffff !important;
     }
-
-    section[data-testid="stSidebar"] * {
-        color: #ffffff !important;
-        font-weight: 500;
-    }
-
-    /* Specific selectors for labels and headers */
+    
+    /* SIDEBAR LABELS (White for high visibility) */
     section[data-testid="stSidebar"] label,
-    section[data-testid="stSidebar"] span,
-    section[data-testid="stSidebar"] p,
     section[data-testid="stSidebar"] h1,
     section[data-testid="stSidebar"] h2,
-    section[data-testid="stSidebar"] h3 {
+    section[data-testid="stSidebar"] h3,
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] span {
         color: #ffffff !important;
     }
 
-    /* Radio button branding */
-    section[data-testid="stSidebar"] input:checked + div {
-        background-color: #58a6ff !important;
-        border-color: #58a6ff !important;
+    /* INPUT BOX TEXT (White background, Dark text for legibility) */
+    section[data-testid="stSidebar"] input,
+    section[data-testid="stSidebar"] textarea {
+        color: #0d1117 !important;
+        background-color: #ffffff !important;
+        border-radius: 4px;
+    }
+
+    /* Number input / text input specific targeting */
+    section[data-testid="stSidebar"] div[data-testid="stTextInput"] input,
+    section[data-testid="stSidebar"] div[data-testid="stNumberInput"] input {
+        color: #0d1117 !important;
+        background-color: #ffffff !important;
+    }
+
+    /* Selectbox text and internal styling */
+    section[data-testid="stSidebar"] div[data-testid="stSelectbox"] div[data-baseweb="select"] {
+        color: #0d1117 !important;
+        background-color: #ffffff !important;
+    }
+
+    /* File uploader box - ensuring the drop zone text is visible */
+    section[data-testid="stSidebar"] .stFileUploader section {
+        background-color: #161b22 !important;
+        color: #ffffff !important;
+        border: 1px dashed #30363d;
+    }
+
+    /* Checkbox & radio labels */
+    section[data-testid="stSidebar"] .stCheckbox label,
+    section[data-testid="stSidebar"] .stRadio label {
+        color: #ffffff !important;
     }
     
-    /* Improve contrast of unselected radio text on hover */
-    div[data-testid="stMarkdownContainer"] > p:hover {
-        color: #58a6ff !important;
-        transition: 0.2s;
+    /* Radio dot color branding */
+    section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] p {
+        color: #ffffff !important;
     }
+
     
     </style>
 """, unsafe_allow_html=True)
