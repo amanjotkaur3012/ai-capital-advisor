@@ -271,17 +271,16 @@ def main():
                     st.warning("AI temporarily unavailable. Please retry.")
 
     elif nav == " ML INTELLIGENCE":
-        # All code below this must be indented by one level (4 spaces)
+
         st.markdown('<div class="section-header">PREDICTIVE ROI LOGIC</div>', unsafe_allow_html=True)
 
         # ============================================================
-        # 1. FEATURE IMPORTANCE — INTERPRETABLE
+        # 1. FEATURE IMPORTANCE (MODEL INTERPRETABILITY)
         # ============================================================
+
         col_l, col_r = st.columns(2)
 
         with col_l:
-            st.write("**WHAT DRIVES ROI (MODEL INTERPRETATION)**")
-
             feat_imp = pd.DataFrame({
                 'Feature': feats,
                 'Importance': rf_model.feature_importances_
@@ -295,36 +294,24 @@ def main():
                 y="Feature",
                 orientation="h",
                 text=feat_imp["Contribution_%"].round(1).astype(str) + "%",
-                title="Relative Contribution to ROI Prediction",
-            )
-
-            fig_imp.add_vline(
-                x=feat_imp["Contribution_%"].mean(),
-                line_dash="dash",
-                annotation_text="Average Influence",
-                opacity=0.4
+                title="Drivers of ROI Prediction"
             )
 
             fig_imp.update_layout(
-                xaxis_title="Contribution to ROI Prediction (%)",
+                xaxis_title="Relative Contribution (%)",
                 yaxis_title="",
-                title_font_size=16
+                title_font_size=18
             )
 
             st.plotly_chart(fig_imp, use_container_width=True)
 
             top_driver = feat_imp.iloc[-1]['Feature']
-            st.caption(
-                f" **Model Insight:** ROI predictions are primarily driven by **{top_driver}**. "
-                f"Capital efficiency is more sensitive to this factor than others."
-            )
 
         # ============================================================
-        # 2. EFFICIENCY FRONTIER — DECISION MAP
+        # 2. VALUE vs ESG MAP (MODEL OUTPUT)
         # ============================================================
+
         with col_r:
-            st.write("**VALUE vs ESG DECISION MAP**")
-
             median_esg = df["ESG_Score"].median()
             median_val = df["Strategic_Value"].median()
 
@@ -335,49 +322,87 @@ def main():
                 size="Investment_Capital",
                 color="Selected",
                 hover_data=["Project_ID", "Pred_ROI", "PI"],
-                title="Value–Sustainability Trade-off",
-                color_discrete_map={1: '#58a6ff', 0: '#30363d'}
+                title="Value vs ESG Trade-off (Model Output)",
+                color_discrete_map={1:'#58a6ff', 0:'#30363d'}
             )
 
-            fig_eff.add_hline(
-                y=median_val, line_dash="dot",
-                annotation_text="High Value Zone"
-            )
-
-            fig_eff.add_vline(
-                x=median_esg, line_dash="dot",
-                annotation_text="High ESG Zone"
-            )
+            fig_eff.add_hline(y=median_val, line_dash="dot")
+            fig_eff.add_vline(x=median_esg, line_dash="dot")
 
             fig_eff.update_layout(
-                xaxis_title="ESG Quality (Higher = Better)",
-                yaxis_title="Strategic Value ($)",
-                title_font_size=16
+                xaxis_title="ESG Score",
+                yaxis_title="Strategic Value",
+                title_font_size=18
             )
 
             st.plotly_chart(fig_eff, use_container_width=True)
 
-            st.caption(
-                " **Interpretation:** Top-right quadrant = projects creating strong value while meeting ESG goals."
-            )
+        # ============================================================
+        # 3. ESG PILLAR BALANCE (MODEL QUALITY CHECK)
+        # ============================================================
 
-        # ============================================================
-        # 3. ESG RADAR — BALANCE DIAGNOSTIC (Fixed & Completed)
-        # ============================================================
-        st.markdown('<div class="section-header">ESG BALANCE DIAGNOSTIC</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">ESG PILLAR BALANCE</div>', unsafe_allow_html=True)
 
         p_means = selected[['E_Score', 'S_Score', 'G_Score']].mean().reset_index()
         p_means.columns = ['Pillar', 'Score']
 
+        imbalance = p_means['Score'].max() - p_means['Score'].min()
+        avg_esg = p_means['Score'].mean()
+
         fig_radar = px.line_polar(
-            p_means, 
-            r='Score', 
-            theta='Pillar', 
+            p_means,
+            r='Score',
+            theta='Pillar',
             line_close=True,
-            title="Portfolio ESG Pillar Distribution"
+            range_r=[0,10],
+            title="ESG Pillar Distribution"
         )
-        fig_radar.update_traces(fill='toself', line_color='#10b981')
+
+        fig_radar.update_layout(title_font_size=18)
         st.plotly_chart(fig_radar, use_container_width=True)
+
+        # ============================================================
+        # 4. MODEL SIGNALS (DATA-DRIVEN)
+        # ============================================================
+
+        if imbalance > 3:
+            model_signal = "ESG imbalance detected across pillars"
+        else:
+            model_signal = "ESG distribution is structurally balanced"
+
+        st.markdown(
+            f"""
+            **Model Signals**
+            - Primary ROI driver: {top_driver}
+            - Average ESG score: {avg_esg:.2f}
+            - ESG dispersion: {imbalance:.2f}
+            """,
+            unsafe_allow_html=True
+        )
+
+        # ============================================================
+        # 5. AI INTERPRETATION
+        # ============================================================
+
+        if st.button("Interpret ML Intelligence"):
+            with st.spinner("Interpreting model outputs..."):
+                try:
+                    model = genai.GenerativeModel("gemini-1.5-flash")
+                    res = model.generate_content(
+                        f"""
+                        Explain the ML intelligence layer to an investment committee:
+
+                        - Primary ROI driver: {top_driver}
+                        - Average ESG score of selected projects: {avg_esg:.2f}
+                        - ESG pillar dispersion: {imbalance:.2f}
+                        - Model separates value and ESG trade-offs visually
+
+                        Focus on model reliability, decision confidence, and limitations.
+                        """
+                    )
+                    st.markdown(f"<div class='ai-insight-box'>{res.text}</div>", unsafe_allow_html=True)
+                except:
+                    st.warning("AI temporarily unavailable. Please retry.")
 
 
     elif nav == " SENSITIVITY":
