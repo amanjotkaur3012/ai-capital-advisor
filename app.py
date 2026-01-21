@@ -16,7 +16,7 @@ from scipy.stats import norm
 # ----------------------------------------------------
 # 0. BACKEND CONFIGURATION & API
 # ----------------------------------------------------
-GEMINI_API_KEY = "AIzaSyDcT_v6HM6S_MqEcxO5pFixbakP3_43Iu4"
+GEMINI_API_KEY = "AIzaSyA-lM0-mz58hRcE45GEzt67jTgZHjwHqWM"
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
