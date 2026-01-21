@@ -318,7 +318,11 @@ def main():
         st.markdown("---")
         st.header("DATA OPS")
         up_file = st.file_uploader("Upload Proposals", type="csv")
-        use_demo = st.checkbox("Load Demo Data", value=not up_file)
+
+        use_demo = False
+        if not up_file:
+            use_demo = st.button("Calculate using demo data")
+
         
         st.header("MARKET BENCHMARKS")
         rf_rate = st.slider("Risk-Free Rate (%)", 0.0, 8.0, 4.2) / 100
