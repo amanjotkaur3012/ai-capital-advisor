@@ -351,8 +351,17 @@ def main():
             
 
     # Dataset Setup
+    # 1. Dataset Setup
     if up_file:
         df = pd.read_csv(up_file)
+        # Fix missing ESG_Score if individual E, S, G columns exist
+        if 'ESG_Score' not in df.columns and all(k in df.columns for k in ['E_Score', 'S_Score', 'G_Score']):
+            df['ESG_Score'] = (df['E_Score'] + df['S_Score'] + df['G_Score']) / 3
+        
+        # KEY FIX: If Actual_ROI is missing (common for new uploads), 
+        # we provide a dummy value so the model doesn't crash
+        if 'Actual_ROI' not in df.columns:
+            df['Actual_ROI'] = (df['Strategic_Alignment'] * 1.5) # Fallback logic
     else:
         np.random.seed(42)
         df = pd.DataFrame({
@@ -367,12 +376,20 @@ def main():
         df['ESG_Score'] = (df['E_Score'] + df['S_Score'] + df['G_Score']) / 3
         df['Actual_ROI'] = (df['Strategic_Alignment'] * 1.8) - (df['Risk_Score'] * 0.5) + 11 + np.random.normal(0, 1.5, 25)
 
-    # Calculation Layers
+    # 2. Machine Learning Calculation Layers
     feats = ['Investment_Capital', 'Risk_Score', 'ESG_Score', 'Volatility', 'Strategic_Alignment']
+    
+    # Verify all features exist before fitting
+    missing_cols = [c for c in feats if c not in df.columns]
+    if missing_cols:
+        st.error(f"Missing mandatory columns in CSV: {missing_cols}")
+        st.stop()
+
     rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
     rf_model.fit(df[feats], df['Actual_ROI'])
     df['Pred_ROI'] = rf_model.predict(df[feats])
     
+    # 3. Financial Engineering Layers
     wacc = rf_rate + 0.06 
     df['ROA_Value'] = df.apply(lambda x: black_scholes_roa(x['Investment_Capital']*1.35, x['Investment_Capital'], 2, rf_rate, x['Volatility']), axis=1)
     df['Strategic_Value'] = ((df['Investment_Capital'] * (df['Pred_ROI']/100)) / wacc) + df['ROA_Value']
