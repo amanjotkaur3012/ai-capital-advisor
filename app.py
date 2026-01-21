@@ -284,16 +284,19 @@ def generate_pdf(selected_df, total_cap, total_val, avg_esg):
         pdf.cell(40, 10, f"{r['Pred_ROI']:.1f}%", 1)
         pdf.ln()
     return pdf.output(dest='S').encode('latin-1')
-    
-    def check_api_status():
+
+# --- ADD THIS HERE (Exactly at the left margin, no initial spaces) ---
+def check_api_status():
     """Verifies connection to Gemini API and returns status color."""
     try:
-        model = genai.GenerativeModel("gemini-2.0-flash-lite")
-        # Lightweight request to check connectivity
+        model = genai.GenerativeModel("models/gemini-2.0-flash-lite")
+        # Lightweight ping to check connectivity
         model.generate_content("ping", generation_config={"max_output_tokens": 1})
         return "#238636", "CONNECTED"  # Institutional Green
     except Exception:
         return "#da3633", "OFFLINE"    # Institutional Red
+    
+    
 
 # ----------------------------------------------------
 # 2. APPLICATION EXECUTION
