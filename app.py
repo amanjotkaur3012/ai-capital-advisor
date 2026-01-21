@@ -150,6 +150,43 @@ st.markdown("""
     section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] p {
         color: #ffffff !important;
     }
+    
+    /* FILE UPLOADER – DARK THEME FIX */
+    section[data-testid="stSidebar"] div[data-testid="stFileUploader"] {
+        background-color: #161b22 !important;
+        border: 1px solid #30363d !important;
+        border-radius: 10px;
+        padding: 12px;
+    }
+
+    section[data-testid="stSidebar"] div[data-testid="stFileUploader"] label {
+        color: #ffffff !important;
+        margin-bottom: 10px;
+    }
+
+    /* Browse files button inside uploader */
+    section[data-testid="stSidebar"] div[data-testid="stFileUploader"] button {
+        background-color: #21262d !important;
+        color: #58a6ff !important;
+        border: 1px solid #30363d !important;
+        border-radius: 8px !important;
+        font-weight: 600;
+        width: 100%; /* Makes button more prominent in sidebar */
+    }
+
+    /* Hover state for uploader button */
+    section[data-testid="stSidebar"] div[data-testid="stFileUploader"] button:hover {
+        background-color: #30363d !important;
+        border-color: #58a6ff !important;
+        color: #58a6ff !important;
+        transition: 0.3s;
+    }
+
+    /* Small text inside uploader (e.g., "Limit 200MB") */
+    section[data-testid="stSidebar"] div[data-testid="stFileUploader"] small {
+        color: #8b949e !important;
+    }
+    
 
     
     </style>
