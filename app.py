@@ -363,29 +363,43 @@ def main():
 
     # Dataset Setup
     # 1. Dataset Setup
+    df = None  # IMPORTANT: start empty
+
+    # ---- 1. Uploaded data ----
     if up_file:
         df = pd.read_csv(up_file)
-        # Fix missing ESG_Score if individual E, S, G columns exist
-        if 'ESG_Score' not in df.columns and all(k in df.columns for k in ['E_Score', 'S_Score', 'G_Score']):
+
+        if 'ESG_Score' not in df.columns and all(k in df.columns for k in ['E_Score','S_Score','G_Score']):
             df['ESG_Score'] = (df['E_Score'] + df['S_Score'] + df['G_Score']) / 3
-        
-        # KEY FIX: If Actual_ROI is missing (common for new uploads), 
-        # we provide a dummy value so the model doesn't crash
+
         if 'Actual_ROI' not in df.columns:
-            df['Actual_ROI'] = (df['Strategic_Alignment'] * 1.5) # Fallback logic
-    else:
+            df['Actual_ROI'] = df['Strategic_Alignment'] * 1.5
+
+    # ---- 2. Demo data (ONLY when button clicked) ----
+    elif use_demo:
         np.random.seed(42)
         df = pd.DataFrame({
-            'Project_ID': [f"FIN-{i:03d}" for i in range(1, 26)],
-            'Department': np.random.choice(['ESG Fintech', 'R&D', 'Infra', 'Digital Assets'], 25),
-            'Investment_Capital': np.random.choice([200000, 500000, 750000, 1250000, 2000000], 25),
-            'Risk_Score': np.random.uniform(2.0, 9.5, 25),
-            'E_Score': np.random.uniform(1, 10, 25), 'S_Score': np.random.uniform(1, 10, 25), 'G_Score': np.random.uniform(1, 10, 25),
-            'Volatility': np.random.uniform(0.12, 0.45, 25), 'Strategic_Alignment': np.random.randint(4, 11, 25),
-            'Phase_1_Cap': np.random.uniform(0.2, 0.5, 25), 'Phase_2_Cap': np.random.uniform(0.2, 0.4, 25)
-        })
-        df['ESG_Score'] = (df['E_Score'] + df['S_Score'] + df['G_Score']) / 3
-        df['Actual_ROI'] = (df['Strategic_Alignment'] * 1.8) - (df['Risk_Score'] * 0.5) + 11 + np.random.normal(0, 1.5, 25)
+        'Project_ID': [f"FIN-{i:03d}" for i in range(1, 26)],
+        'Department': np.random.choice(['ESG Fintech','R&D','Infra','Digital Assets'], 25),
+        'Investment_Capital': np.random.choice([200000,500000,750000,1250000,2000000], 25),
+        'Risk_Score': np.random.uniform(2.0, 9.5, 25),
+        'E_Score': np.random.uniform(1,10,25),
+        'S_Score': np.random.uniform(1,10,25),
+        'G_Score': np.random.uniform(1,10,25),
+        'Volatility': np.random.uniform(0.12, 0.45, 25),
+        'Strategic_Alignment': np.random.randint(4,11,25),
+        'Phase_1_Cap': np.random.uniform(0.2, 0.5, 25),
+        'Phase_2_Cap': np.random.uniform(0.2, 0.4, 25)
+    })
+
+         df['ESG_Score'] = (df['E_Score'] + df['S_Score'] + df['G_Score']) / 3
+         df['Actual_ROI'] = (
+         df['Strategic_Alignment'] * 1.8
+         - df['Risk_Score'] * 0.5
+         + 11
+         + np.random.normal(0, 1.5, 25)
+    )
+
 
     # 2. Machine Learning Calculation Layers
     feats = ['Investment_Capital', 'Risk_Score', 'ESG_Score', 'Volatility', 'Strategic_Alignment']
