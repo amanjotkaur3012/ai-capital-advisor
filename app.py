@@ -719,22 +719,22 @@ def main():
         # 6. EXECUTIVE RECOMMENDATION
         # ============================================================
 
-        st.markdown('<div class="section-header">EXECUTIVE SIGNAL</div>', unsafe_allow_html=True)
+        #st.markdown('<div class="section-header">EXECUTIVE SIGNAL</div>', unsafe_allow_html=True)
 
-        if best_scenario == "Balanced Strategy" and stress_ratio < 1.2:
-            rec = "PROCEED"
-            color = "green"
-        elif best_scenario == "Growth First" and stress_ratio < 1.15:
-            rec = "PROCEED WITH CAUTION"
-            color = "orange"
-        else:
-            rec = "RESTRUCTURE"
-            color = "red"
+        #if best_scenario == "Balanced Strategy" and stress_ratio < 1.2:
+            #rec = "PROCEED"
+            #color = "green"
+        #elif best_scenario == "Growth First" and stress_ratio < 1.15:
+            #rec = "PROCEED WITH CAUTION"
+            #color = "orange"
+        #else:
+            #rec = "RESTRUCTURE"
+            #color = "red"
 
-        st.markdown(
-            f"<h2 style='color:{color}; font-weight:800;'>Recommendation: {rec}</h2>",
-            unsafe_allow_html=True
-        )
+        #st.markdown(
+            #f"<h2 style='color:{color}; font-weight:800;'>Recommendation: {rec}</h2>",
+            #unsafe_allow_html=True
+        #)
 
         # ============================================================
         # 7. AI INTERPRETATION (REFINED FOR API STABILITY)
