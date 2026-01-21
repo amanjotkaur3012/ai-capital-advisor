@@ -187,7 +187,7 @@ st.markdown("""
         color: #8b949e !important;
     }
     
-    /* HIGH-STAKES VISIBILITY FOR METRIC LABELS */
+    /* DEEP TARGETING FOR METRIC LABELS (White Visibility Fix) */
     div[data-testid="stMetricLabel"] > div > p {
         color: #ffffff !important;
         font-weight: 700 !important;
@@ -195,16 +195,23 @@ st.markdown("""
         opacity: 1 !important;
     }
 
-    /* Ensure the Value (the numbers) also stays bright white */
-    div[data-testid="stMetricValue"] {
+    /* Target the fallback if the above doesn't catch it */
+    [data-testid="stMetricLabel"] p {
         color: #ffffff !important;
     }
 
-    /* Optional: Add a subtle glow to the card border for better definition */
+    /* Ensure the large Metric Value (the numbers) stays bright white */
+    div[data-testid="stMetricValue"] > div {
+        color: #ffffff !important;
+        font-weight: 800 !important;
+    }
+
+    /* Card Styling */
     div[data-testid="stMetric"] {
+        background: #161b22 !important;
         border: 1px solid #30363d !important;
-        background-color: #161b22 !important;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        border-radius: 12px !important;
+        padding: 20px !important;
     }
     
 
