@@ -362,6 +362,7 @@ def main():
             
 
     # Dataset Setup
+        # Dataset Setup
     # ---- DATASET SETUP (ALIGNED) ----
     df = None  # IMPORTANT: start empty
 
@@ -401,12 +402,12 @@ def main():
             + 11 
             + np.random.normal(0, 1.5, 25)
         )
-        
-    if df is None:
-    st.info("Upload a proposals CSV or click **Calculate using demo data** to begin analysis.")
-    st.stop()
 
-    
+    # 🚨 THIS WAS THE ERROR — NOW FIXED
+    if df is None:
+        st.info("Upload a proposals CSV or click **Calculate using demo data** to begin analysis.")
+        st.stop()
+
     # 2. Machine Learning Calculation Layers
     feats = ['Investment_Capital', 'Risk_Score', 'ESG_Score', 'Volatility', 'Strategic_Alignment']
     
@@ -422,7 +423,13 @@ def main():
     
     # 3. Financial Engineering Layers
     wacc = rf_rate + 0.06 
-    df['ROA_Value'] = df.apply(lambda x: black_scholes_roa(x['Investment_Capital']*1.35, x['Investment_Capital'], 2, rf_rate, x['Volatility']), axis=1)
+    df['ROA_Value'] = df.apply(
+        lambda x: black_scholes_roa(
+            x['Investment_Capital']*1.35, 
+            x['Investment_Capital'], 
+            2, rf_rate, x['Volatility']
+        ), axis=1
+    )
     df['Strategic_Value'] = ((df['Investment_Capital'] * (df['Pred_ROI']/100)) / wacc) + df['ROA_Value']
     df['PI'] = df['Strategic_Value'] / df['Investment_Capital']
     df['Sharpe_Score'] = (df['Pred_ROI'] - (rf_rate * 100)) / (df['Volatility'] * 100)
