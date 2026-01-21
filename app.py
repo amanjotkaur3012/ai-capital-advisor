@@ -273,6 +273,16 @@ def generate_pdf(selected_df, total_cap, total_val, avg_esg):
         pdf.cell(40, 10, f"{r['Pred_ROI']:.1f}%", 1)
         pdf.ln()
     return pdf.output(dest='S').encode('latin-1')
+    
+    def check_api_status():
+    """Verifies connection to Gemini API and returns status color."""
+    try:
+        model = genai.GenerativeModel("gemini-2.0-flash-lite")
+        # Lightweight request to check connectivity
+        model.generate_content("ping", generation_config={"max_output_tokens": 1})
+        return "#238636", "CONNECTED"  # Institutional Green
+    except Exception:
+        return "#da3633", "OFFLINE"    # Institutional Red
 
 # ----------------------------------------------------
 # 2. APPLICATION EXECUTION
@@ -311,6 +321,21 @@ def main():
                 mime="application/pdf",
                 key="sidebar_pdf_download"
             )
+            
+            # --- MODEL STATUS INDICATOR ---
+        st.markdown("---")
+        color, status_text = check_api_status()
+        st.markdown(f"""
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px; 
+                        background: #161b22; border-radius: 8px; border: 1px solid #30363d;">
+                <div style="width: 12px; height: 12px; background-color: {color}; 
+                            border-radius: 50%; box-shadow: 0 0 8px {color};"></div>
+                <span style="color: #ffffff; font-size: 14px; font-weight: 600; 
+                             letter-spacing: 0.5px;">API STATUS: {status_text}</span>
+            </div>
+        """, unsafe_allow_html=True)
+           
+            
 
     # Dataset Setup
     if up_file:
