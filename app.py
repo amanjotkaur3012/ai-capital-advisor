@@ -647,6 +647,11 @@ def main():
         # 4. MODEL SIGNALS (DATA-DRIVEN)
         # ============================================================
 
+        # --- CALCULATE SIGNALS FOR LOGIC AND AI ---
+        # Using sel_means from the bar chart logic above
+        avg_esg_val = sel_means.mean()
+        imbalance = sel_means.max() - sel_means.min()
+
         if imbalance > 3:
             model_signal = "ESG imbalance detected across pillars"
         else:
@@ -654,34 +659,35 @@ def main():
 
         st.markdown(
             f"""
-            **Model Signals**
-            - Primary ROI driver: {top_driver}
-            - Average ESG score: {avg_esg:.2f}
-            - ESG dispersion: {imbalance:.2f}
+            <div style="background: rgba(16, 185, 129, 0.05); padding: 20px; border-radius: 8px; border: 1px solid #238636; margin: 20px 0;">
+            <p style='color:#10b981; font-weight:700; margin-bottom:10px;'>MODEL ANALYTICS</p>
+            <ul style='list-style-type: none; padding-left: 0; color: #f0f6fc;'>
+                <li>🎯 Primary ROI Driver: <b>{top_driver.replace('_',' ')}</b></li>
+                <li>📊 Average ESG Score: <b>{avg_esg_val:.2f}</b></li>
+                <li>⚖️ ESG Dispersion: <b>{imbalance:.2f}</b></li>
+                <li>📡 Model Status: <b>{model_signal}</b></li>
+            </ul>
+            </div>
             """,
             unsafe_allow_html=True
         )
 
         # ============================================================
-        # 5. AI INTERPRETATION
+        # 5. AI INTERPRETATION (ML INTELLIGENCE)
         # ============================================================
-
         if st.button("Interpret ML Intelligence", key="btn_ml"):
             with st.status("AI Decoding Predictive Logic...", expanded=True) as status:
                 try:
-                    # Use the 2026 stable identifier
                     model = genai.GenerativeModel(model_name="models/gemini-3-flash-preview")
+                    # Prompt using the variables we just calculated
+                    prompt = f"Explain to a Board: The main ROI driver is {top_driver}. The portfolio ESG score is {avg_esg_val:.2f} with a dispersion of {imbalance:.2f}. Is the model picking high-quality projects?"
                     
-                    prompt = f"Explain to a Board of Directors: The main ROI driver is {top_driver}. The portfolio ESG score is {avg_esg:.2f} with a dispersion of {imbalance:.2f}. Is the model picking high-quality projects?"
-                    
-                    # 1. ADD SAFETY CONFIG HERE
                     response = model.generate_content(prompt, safety_settings=safety_config)
                     
-                    # 2. ADD PART VALIDATION HERE
                     if response.candidates and len(response.candidates[0].content.parts) > 0:
                         st.markdown(f"<div class='ai-insight-box'>{response.text}</div>", unsafe_allow_html=True)
                     else:
-                        st.warning("The ML analysis was blocked by safety filters. This usually happens with high-risk scores.")
+                        st.warning("The ML analysis was blocked by safety filters.")
                     
                     status.update(label="ML Insight Ready", state="complete")
                 except Exception as e:
