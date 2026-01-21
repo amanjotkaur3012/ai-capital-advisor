@@ -50,7 +50,24 @@ st.markdown("""
         padding: 25px; border-radius: 10px; color: #f0f6fc; margin: 20px 0;
         font-size: 17px; line-height: 1.6;
     }
-    section[data-testid="stSidebar"] { background-color: #010409 !important; border-right: 2px solid #30363d; }
+    section[data-testid="stSidebar"] { 
+        background-color: #010409 !important; 
+        border-right: 2px solid #30363d; 
+    }
+
+    /* Button text color – visible on all backgrounds */
+    .stButton > button {
+        color: #58a6ff !important;
+        font-weight: 600;
+        background-color: #161b22; /* Adds depth to the dark theme */
+        border: 1px solid #30363d;
+    }
+
+    .stButton > button:hover {
+        color: #58a6ff !important;
+        border-color: #58a6ff;
+        background-color: #0d1117;
+    }
     </style>
 """, unsafe_allow_html=True)
 
