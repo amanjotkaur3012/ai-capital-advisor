@@ -574,25 +574,76 @@ def main():
         # 3. ESG PILLAR BALANCE (MODEL QUALITY CHECK)
         # ============================================================
 
-        st.markdown('<div class="section-header">ESG PILLAR BALANCE</div>', unsafe_allow_html=True)
+        # ============================================================
+# 3. ESG PILLAR BALANCE (SELECTED vs UNIVERSE BENCHMARK)
+# ============================================================
 
-        p_means = selected[['E_Score', 'S_Score', 'G_Score']].mean().reset_index()
-        p_means.columns = ['Pillar', 'Score']
+st.markdown('<div class="section-header">ESG PILLAR BALANCE (RELATIVE QUALITY)</div>', unsafe_allow_html=True)
 
-        imbalance = p_means['Score'].max() - p_means['Score'].min()
-        avg_esg = p_means['Score'].mean()
+# 1. Selected portfolio averages (The projects optimized by Pulp)
+sel_means = selected[['E_Score', 'S_Score', 'G_Score']].mean()
+sel_df = pd.DataFrame({
+    "Pillar": sel_means.index,
+    "Score": sel_means.values,
+    "Group": "Selected Portfolio"
+})
 
-        fig_radar = px.line_polar(
-            p_means,
-            r='Score',
-            theta='Pillar',
-            line_close=True,
-            range_r=[0,10],
-            title="ESG Pillar Distribution"
-        )
+# 2. Universe averages (All uploaded or demo projects)
+uni_means = df[['E_Score', 'S_Score', 'G_Score']].mean()
+uni_df = pd.DataFrame({
+    "Pillar": uni_means.index,
+    "Score": uni_means.values,
+    "Group": "Universe Average"
+})
 
-        fig_radar.update_layout(title_font_size=18)
-        st.plotly_chart(fig_radar, use_container_width=True)
+# 3. Combine for plotting
+plot_df = pd.concat([sel_df, uni_df], ignore_index=True)
+
+fig_esg = px.bar(
+    plot_df,
+    x="Pillar",
+    y="Score",
+    color="Group",
+    barmode="group",
+    text=plot_df["Score"].round(1),
+    title="ESG Pillar Comparison: Selected Portfolio vs Universe",
+    color_discrete_map={
+        "Selected Portfolio": "#58a6ff", # Your primary blue
+        "Universe Average": "#30363d"    # Your secondary grey
+    }
+)
+
+fig_esg.update_layout(
+    yaxis_title="Average Score (0–10)",
+    xaxis_title="ESG Pillar",
+    title_font_size=18,
+    legend_title="Benchmark",
+    yaxis=dict(range=[0,11]), # Added breathing room at the top
+    template="plotly_dark",   # Ensures alignment with your dark theme
+    paper_bgcolor='rgba(0,0,0,0)',
+    plot_bgcolor='rgba(0,0,0,0)'
+)
+
+st.plotly_chart(fig_esg, use_container_width=True)
+
+# ===== INTERPRETATION METRICS =====
+gap = sel_means - uni_means
+worst_pillar = gap.idxmin()
+best_pillar = gap.idxmax()
+
+st.markdown(
+    f"""
+    <div style="background: rgba(88, 166, 255, 0.05); padding: 20px; border-radius: 8px; border: 1px solid #30363d;">
+    <p style='color:#58a6ff; font-weight:700; margin-bottom:10px;'>ESG QUALITY SIGNALS</p>
+    <ul style='list-style-type: none; padding-left: 0;'>
+        <li>💎 Strongest relative pillar: <b>{best_pillar.replace('_',' ')}</b></li>
+        <li>⚠️ Weakest relative pillar: <b>{worst_pillar.replace('_',' ')}</b></li>
+        <li>📈 Net ESG premium vs universe: <b>{gap.mean():+.2f}</b></li>
+    </ul>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
         # ============================================================
         # 4. MODEL SIGNALS (DATA-DRIVEN)
