@@ -318,13 +318,10 @@ def main():
         st.markdown("---")
         st.header("EXECUTIVE REPORTING")
         if st.button("PREPARE PDF SUMMARY", key="sidebar_pdf_trigger"):
-            # Ensure calculations happen before calling the function
             t_cap = selected['Investment_Capital'].sum()
             t_val = selected['Strategic_Value'].sum()
             a_esg = selected['ESG_Score'].mean()
-            
             pdf_data = generate_pdf(selected, t_cap, t_val, a_esg)
-            
             st.download_button(
                 label="📥 DOWNLOAD EXECUTIVE PDF",
                 data=pdf_data,
@@ -332,20 +329,22 @@ def main():
                 mime="application/pdf",
                 key="sidebar_pdf_download"
             )
-            
-            # --- MODEL STATUS INDICATOR ---
+
+        # --- MODEL STATUS INDICATOR (ALWAYS VISIBLE) ---
         st.markdown("---")
-        color, status_text = check_api_status()
-        st.markdown(f"""
-            <div style="display: flex; align-items: center; gap: 10px; padding: 10px; 
-                        background: #161b22; border-radius: 8px; border: 1px solid #30363d;">
-                <div style="width: 12px; height: 12px; background-color: {color}; 
-                            border-radius: 50%; box-shadow: 0 0 8px {color};"></div>
-                <span style="color: #ffffff; font-size: 14px; font-weight: 600; 
-                             letter-spacing: 0.5px;">API STATUS: {status_text}</span>
-            </div>
-        """, unsafe_allow_html=True)
-           
+        try:
+            color, status_text = check_api_status()
+            st.markdown(f"""
+                <div style="display: flex; align-items: center; gap: 10px; padding: 10px; 
+                            background: #161b22; border-radius: 8px; border: 1px solid #30363d;">
+                    <div style="width: 12px; height: 12px; background-color: {color}; 
+                                border-radius: 50%; box-shadow: 0 0 8px {color};"></div>
+                    <span style="color: #ffffff; font-size: 14px; font-weight: 600; 
+                                 letter-spacing: 0.5px;">API STATUS: {status_text}</span>
+                </div>
+            """, unsafe_allow_html=True)
+        except:
+            st.error("Status check failed.")
             
 
     # Dataset Setup
