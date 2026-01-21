@@ -290,10 +290,13 @@ def main():
         st.markdown("---")
         st.header("EXECUTIVE REPORTING")
         if st.button("PREPARE PDF SUMMARY", key="sidebar_pdf_trigger"):
+            # Ensure calculations happen before calling the function
             t_cap = selected['Investment_Capital'].sum()
             t_val = selected['Strategic_Value'].sum()
             a_esg = selected['ESG_Score'].mean()
+            
             pdf_data = generate_pdf(selected, t_cap, t_val, a_esg)
+            
             st.download_button(
                 label="📥 DOWNLOAD EXECUTIVE PDF",
                 data=pdf_data,
