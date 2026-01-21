@@ -20,6 +20,13 @@ GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
+# ADD THIS: Permissive settings to prevent blocking financial data
+safety_config = [
+    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+
 st.set_page_config(page_title="STRATOS QUANT", layout="wide")
 
 # INSTITUTIONAL HIGH-CONTRAST CSS
@@ -480,12 +487,18 @@ def main():
         if st.button("Interpret Summary", key="btn_sum"):
             with st.status("AI Analyzing Balance Sheet...", expanded=True) as status:
                 try:
-                    # UPDATED MODEL NAME STRING
                     model = genai.GenerativeModel(model_name="models/gemini-3-flash-preview")
-                    
                     prompt = f"Act as a CFO. Portfolio summary: Budget ${total_capital:,.0f}, Strategic Value ${total_value:,.0f}, ESG {avg_esg:.1f}. Analyze the wealth creation quality."
-                    response = model.generate_content(prompt)
-                    st.markdown(f"<div class='ai-insight-box'>{response.text}</div>", unsafe_allow_html=True)
+                    
+                    # Pass the safety settings here
+                    response = model.generate_content(prompt, safety_settings=safety_config)
+                    
+                    # Check if text exists before calling .text
+                    if response.candidates and len(response.candidates[0].content.parts) > 0:
+                        st.markdown(f"<div class='ai-insight-box'>{response.text}</div>", unsafe_allow_html=True)
+                    else:
+                        st.warning("The model blocked this analysis due to safety filters. Try rephrasing your constraints.")
+                    
                     status.update(label="Analysis Complete", state="complete")
                 except Exception as e:
                     st.error(f"API Error: {str(e)}")
@@ -1073,13 +1086,17 @@ def main():
             with st.status("AI Generating Investment Memorandum...", expanded=True) as status:
                 try:
                     model = genai.GenerativeModel(model_name="models/gemini-3-flash-preview")
-                    prompt = f"""
-                    Write an institutional investment thesis for project {target}:
-                    - Capital: {r['Investment_Capital']:,.0f}, PI: {r['PI']:.2f}, Risk: {r['Risk_Score']:.1f}, ESG: {r['ESG_Score']:.2f}.
-                    Structure as: rationale, value drivers, risks, and recommendation.
-                    """
-                    response = model.generate_content(prompt)
-                    st.markdown(f"<div class='ai-insight-box'>{response.text}</div>", unsafe_allow_html=True)
+                    prompt = f"Write institutional investment thesis for project {target}: Capital: {r['Investment_Capital']:,.0f}, PI: {r['PI']:.2f}, Risk: {r['Risk_Score']:.1f}, ESG: {r['ESG_Score']:.2f}."
+                    
+                    # Use safety config
+                    response = model.generate_content(prompt, safety_settings=safety_config)
+                    
+                    # Validate parts exist
+                    if response.candidates and len(response.candidates[0].content.parts) > 0:
+                        st.markdown(f"<div class='ai-insight-box'>{response.text}</div>", unsafe_allow_html=True)
+                    else:
+                        st.error("Thesis generation blocked by safety filters. Check project risk scores.")
+                        
                     status.update(label="Thesis Generated", state="complete")
                 except Exception as e:
                     st.error(f"Thesis API Error: {str(e)}")
