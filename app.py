@@ -96,6 +96,39 @@ st.markdown("""
         background-color: #30363d;
         border-color: #8b949e;
     }
+    
+    /* SIDEBAR TEXT — FORCE WHITE & HIGH CONTRAST */
+    section[data-testid="stSidebar"] {
+        color: #ffffff !important;
+    }
+
+    section[data-testid="stSidebar"] * {
+        color: #ffffff !important;
+        font-weight: 500;
+    }
+
+    /* Specific selectors for labels and headers */
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3 {
+        color: #ffffff !important;
+    }
+
+    /* Radio button branding */
+    section[data-testid="stSidebar"] input:checked + div {
+        background-color: #58a6ff !important;
+        border-color: #58a6ff !important;
+    }
+    
+    /* Improve contrast of unselected radio text on hover */
+    div[data-testid="stMarkdownContainer"] > p:hover {
+        color: #58a6ff !important;
+        transition: 0.2s;
+    }
+    
     </style>
 """, unsafe_allow_html=True)
 
