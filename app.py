@@ -362,7 +362,7 @@ def main():
             
 
     # Dataset Setup
-        # Dataset Setup
+            # Dataset Setup
     # ---- DATASET SETUP (ALIGNED) ----
     df = None  # IMPORTANT: start empty
 
@@ -436,6 +436,7 @@ def main():
 
     df = run_optimization(df, budget, esg_min)
     selected = df[df['Selected'] == 1]
+
 
     # TOP BRANDING
     st.markdown('<p class="main-title">STRATOS | Capital Allocation Advisor</p>', unsafe_allow_html=True)
