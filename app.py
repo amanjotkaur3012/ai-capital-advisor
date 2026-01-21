@@ -334,20 +334,20 @@ def main():
             )
 
         # --- MODEL STATUS INDICATOR (ALWAYS VISIBLE) ---
-        st.markdown("---")
-        try:
-            color, status_text = check_api_status()
-            st.markdown(f"""
-                <div style="display: flex; align-items: center; gap: 10px; padding: 10px; 
-                            background: #161b22; border-radius: 8px; border: 1px solid #30363d;">
-                    <div style="width: 12px; height: 12px; background-color: {color}; 
-                                border-radius: 50%; box-shadow: 0 0 8px {color};"></div>
-                    <span style="color: #ffffff; font-size: 14px; font-weight: 600; 
-                                 letter-spacing: 0.5px;">API STATUS: {status_text}</span>
-                </div>
-            """, unsafe_allow_html=True)
-        except:
-            st.error("Status check failed.")
+        #st.markdown("---")
+        #try:
+        #    color, status_text = check_api_status()
+        #    st.markdown(f"""
+        #        <div style="display: flex; align-items: center; gap: 10px; padding: 10px; 
+        #                    background: #161b22; border-radius: 8px; border: 1px solid #30363d;">
+        #            <div style="width: 12px; height: 12px; background-color: {color}; 
+        #                        border-radius: 50%; box-shadow: 0 0 8px {color};"></div>
+        #            <span style="color: #ffffff; font-size: 14px; font-weight: 600; 
+        #                         letter-spacing: 0.5px;">API STATUS: {status_text}</span>
+        #        </div>
+        #    """, unsafe_allow_html=True)
+        #except:
+        #    st.error("Status check failed.")
             
 
     # Dataset Setup
