@@ -311,38 +311,50 @@ def check_api_status():
 
 def main():
     with st.sidebar:
-        st.markdown("<h1 style='color:#58a6ff; font-size:36px; font-weight:800;'>TERMINAL</h1>", unsafe_allow_html=True)
+        selected = None
+        df = None
+        
+        with st.markdown("<h1 style='color:#58a6ff; font-size:36px; font-weight:800;'>TERMINAL</h1>", unsafe_allow_html=True)
         nav = st.radio("SELECT ANALYTIC VIEW", 
                        ["SUMMARY", " ML INTELLIGENCE", " SENSITIVITY", " RISK MANAGEMENT", " INSTITUTIONAL THESIS"])
         
-        st.markdown("---")
-        st.header("DATA OPS")
-        up_file = st.file_uploader("Upload Proposals", type="csv")
+             st.markdown("---")
+             st.header("DATA OPS")
+             up_file = st.file_uploader("Upload Proposals", type="csv")
 
-        use_demo = False
-        if not up_file:
-            use_demo = st.button("Calculate using demo data")
+             use_demo = False
+             if not up_file:
+                 use_demo = st.button("Calculate using demo data")
 
         
-        st.header("MARKET BENCHMARKS")
-        rf_rate = st.slider("Risk-Free Rate (%)", 0.0, 8.0, 4.2) / 100
-        budget = st.number_input("Capital Constraint ($)", value=5500000, step=500000)
-        esg_min = st.slider("Sustainability Hurdle (ESG)", 1, 10, 6)
+             st.header("MARKET BENCHMARKS")
+             rf_rate = st.slider("Risk-Free Rate (%)", 0.0, 8.0, 4.2) / 100
+             budget = st.number_input("Capital Constraint ($)", value=5500000, step=500000)
+             esg_min = st.slider("Sustainability Hurdle (ESG)", 1, 10, 6)
         
-        st.markdown("---")
-        st.header("EXECUTIVE REPORTING")
-        if st.button("PREPARE PDF SUMMARY", key="sidebar_pdf_trigger"):
-            t_cap = selected['Investment_Capital'].sum()
-            t_val = selected['Strategic_Value'].sum()
-            a_esg = selected['ESG_Score'].mean()
-            pdf_data = generate_pdf(selected, t_cap, t_val, a_esg)
-            st.download_button(
-                label="📥 DOWNLOAD EXECUTIVE PDF",
-                data=pdf_data,
-                file_name="STRATOS_Report.pdf",
-                mime="application/pdf",
-                key="sidebar_pdf_download"
-            )
+             # --- EXECUTIVE REPORTING (ALIGNED) ---
+             st.markdown("---")
+             st.header("EXECUTIVE REPORTING")
+        
+             if st.button("PREPARE PDF SUMMARY", key="sidebar_pdf_trigger"):
+                 # Guardrail to ensure 'selected' dataframe exists
+                 if selected is None or selected.empty:
+                st.warning(" No data found. Please upload a CSV or enable Demo Mode first.")
+                     else:
+                        with st.spinner("Generating PDF Report..."):
+                        t_cap = selected['Investment_Capital'].sum()
+                        t_val = selected['Strategic_Value'].sum()
+                        a_esg = selected['ESG_Score'].mean()
+
+                        pdf_data = generate_pdf(selected, t_cap, t_val, a_esg)
+
+                        st.download_button(
+                            label=" DOWNLOAD EXECUTIVE PDF",
+                            data=pdf_data,
+                            file_name="STRATOS_Report.pdf",
+                            mime="application/pdf",
+                            key="sidebar_pdf_download"
+                        )
 
         # --- MODEL STATUS INDICATOR (ALWAYS VISIBLE) ---
         #st.markdown("---")
